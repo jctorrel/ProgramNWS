@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Login from "../components/Login";
 import PrivateRoute from "../components/PrivateRoute";
 import AdminHome from "./admin/AdminHome";
+import Home from "./Home";
 
 function App() {
   return (
@@ -13,13 +14,20 @@ function App() {
         <Route
           path="/"
           element={
-            <PrivateRoute>
-              <AdminHome />
-            </PrivateRoute>
+              <Home />
           }
         />
+        
+        <Route
+        path="/admin"
+        element={
+          <PrivateRoute>
+            <AdminHome />
+          </PrivateRoute>
+        }
+      />
       </Routes>
-    </BrowserRouter>
+    </ BrowserRouter >
   );
 }
 

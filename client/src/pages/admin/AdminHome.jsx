@@ -82,15 +82,8 @@ function AdminHome() {
     // Combiner les erreurs d'action et de sauvegarde
     const displayError = actionError || saveError;
 
-    
-    console.log('selectedProgram dans AdminProgramsSection:', selectedProgram); 
     return (
         <section style={styles.section}>
-            <h2 style={styles.title}>Programmes</h2>
-            <p style={styles.help}>
-                Sélectionne un programme dans la liste pour l'éditer.
-            </p>
-
             {displayError && <p style={styles.errorText}>{displayError}</p>}
 
             <div style={styles.layout}>

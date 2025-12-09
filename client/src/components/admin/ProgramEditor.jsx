@@ -1,18 +1,9 @@
 // src/components/admin/ProgramEditor.jsx
 import { useState, useEffect, useRef } from 'react';
 import { ErrorMessage, SuccessMessage } from "./AdminStatus";
-
-// Fonction pour générer un slug
-function generateSlug(text) {
-    return text
-        .toLowerCase()
-        .normalize('NFD') // Décompose les caractères accentués
-        .replace(/[\u0300-\u036f]/g, '') // Supprime les accents
-        .replace(/[^a-z0-9\s-]/g, '') // Garde seulement lettres, chiffres, espaces et tirets
-        .trim()
-        .replace(/\s+/g, '-') // Remplace les espaces par des tirets
-        .replace(/-+/g, '-'); // Évite les tirets multiples
-}
+import ProgramKeySelector from './ProgramKeySelector';
+import ModuleCard from './ModuleCard';
+import { generateUniqueId, parseKey, generateKey, isValidDate } from '../../utils/constants';
 
 function ProgramEditor({
     selectedProgram,
@@ -22,29 +13,61 @@ function ProgramEditor({
     onSave,
     onDelete,
 }) {
-    console.log('🎯 ProgramEditor reçoit selectedProgram:', selectedProgram);
     const [formData, setFormData] = useState({
         key: '',
         label: '',
         description: '',
         modules: []
     });
-
+    const [selectedYear, setSelectedYear] = useState('');
+    const [selectedFiliere, setSelectedFiliere] = useState('');
+    const [originalData, setOriginalData] = useState(null);
     const [showJsonPreview, setShowJsonPreview] = useState(false);
+    const [isDirty, setIsDirty] = useState(false);
+    const [draggedIndex, setDraggedIndex] = useState(null);
     const modulesEndRef = useRef(null);
 
+    // Charger le programme sélectionné
     useEffect(() => {
-        console.log('📝 useEffect déclenché avec selectedProgram:', selectedProgram); // ✅ Ajoute ça
         if (selectedProgram) {
-            setFormData({
+            const modulesWithIds = (selectedProgram.modules || []).map(mod => ({
+                ...mod,
+                _uniqueId: mod._uniqueId || generateUniqueId()
+            }));
+
+            const programData = {
                 key: selectedProgram.key || '',
                 label: selectedProgram.label || '',
                 description: selectedProgram.description || '',
-                modules: selectedProgram.modules || []
-            });
-            console.log('✅ formData mis à jour'); // ✅ Et ça
+                modules: modulesWithIds
+            };
+
+            // Décomposer la clé
+            const { year, filiere } = parseKey(selectedProgram.key);
+            setSelectedYear(year);
+            setSelectedFiliere(filiere);
+
+            setFormData(programData);
+            setOriginalData(JSON.parse(JSON.stringify(programData)));
+            setIsDirty(false);
         }
     }, [selectedProgram]);
+
+    // Générer automatiquement la clé
+    useEffect(() => {
+        const generatedKey = generateKey(selectedYear, selectedFiliere);
+        if (generatedKey) {
+            setFormData(prev => ({ ...prev, key: generatedKey }));
+        }
+    }, [selectedYear, selectedFiliere]);
+
+    // Détecter les modifications
+    useEffect(() => {
+        if (originalData) {
+            const hasChanges = JSON.stringify(formData) !== JSON.stringify(originalData);
+            setIsDirty(hasChanges);
+        }
+    }, [formData, originalData]);
 
     if (!selectedProgram) {
         return (
@@ -60,6 +83,11 @@ function ProgramEditor({
         setFormData(prev => ({ ...prev, [field]: value }));
     };
 
+    const handleKeyChange = ({ year, filiere }) => {
+        setSelectedYear(year);
+        setSelectedFiliere(filiere);
+    };
+
     const handleModuleChange = (index, field, value) => {
         setFormData(prev => ({
             ...prev,
@@ -70,72 +98,271 @@ function ProgramEditor({
     };
 
     const addModule = () => {
+        const newModule = {
+            _uniqueId: generateUniqueId(),
+            id: '',
+            label: '',
+            start_month: 9,
+            end_month: 9,
+            content: [],
+            deliverables: []
+        };
+
         setFormData(prev => ({
             ...prev,
-            modules: [...prev.modules, {
-                id: '',
-                label: '',
-                start_month: 9,
-                end_month: 9,
-                content: [],
-                deliverables: []
-            }]
+            modules: [...prev.modules, newModule]
         }));
 
-        // Scroll vers le bas après un court délai
         setTimeout(() => {
             modulesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
         }, 100);
     };
 
-    const removeModule = (index) => {
+    const duplicateModule = (index) => {
+        const moduleToDuplicate = formData.modules[index];
+        const duplicatedModule = {
+            ...JSON.parse(JSON.stringify(moduleToDuplicate)),
+            _uniqueId: generateUniqueId(),
+            label: `${moduleToDuplicate.label} (copie)`,
+            id: `${moduleToDuplicate.id}-copy`
+        };
+
         setFormData(prev => ({
             ...prev,
-            modules: prev.modules.filter((_, i) => i !== index)
+            modules: [
+                ...prev.modules.slice(0, index + 1),
+                duplicatedModule,
+                ...prev.modules.slice(index + 1)
+            ]
         }));
     };
 
-    const moveModule = (index, direction) => {
-        const newModules = [...formData.modules];
-        const newIndex = direction === 'up' ? index - 1 : index + 1;
-        if (newIndex >= 0 && newIndex < newModules.length) {
-            [newModules[index], newModules[newIndex]] = [newModules[newIndex], newModules[index]];
-            setFormData(prev => ({ ...prev, modules: newModules }));
+    const removeModule = (index) => {
+        const moduleName = formData.modules[index].label || `Module ${index + 1}`;
+        if (window.confirm(`Supprimer le module "${moduleName}" ?\nCette action est irréversible.`)) {
+            setFormData(prev => ({
+                ...prev,
+                modules: prev.modules.filter((_, i) => i !== index)
+            }));
         }
     };
 
-    const handleSubmit = (e) => {
+    // Drag & Drop handlers
+    const handleDragStart = (index) => {
+        setDraggedIndex(index);
+    };
+
+    const handleDragOver = (e, index) => {
         e.preventDefault();
-        // Nettoyer les content avant sauvegarde
+        if (draggedIndex === null || draggedIndex === index) return;
+
+        const newModules = [...formData.modules];
+        const draggedItem = newModules[draggedIndex];
+        newModules.splice(draggedIndex, 1);
+        newModules.splice(index, 0, draggedItem);
+
+        setFormData(prev => ({ ...prev, modules: newModules }));
+        setDraggedIndex(index);
+    };
+
+    const handleDragEnd = () => {
+        setDraggedIndex(null);
+    };
+
+    const handleSubmit = (e) => {
+        if (e) e.preventDefault();
+        
+        // Validation de la clé
+        if (!selectedYear) {
+            alert('❌ Veuillez sélectionner une année');
+            return;
+        }
+        
+        if (selectedYear !== '1' && !selectedFiliere) {
+            alert('❌ Veuillez sélectionner une filière pour cette année');
+            return;
+        }
+        
+        if (!formData.key) {
+            alert('❌ La clé du programme n\'a pas pu être générée');
+            return;
+        }
+        
+        // Validation des dates de livrables
+        let hasInvalidDates = false;
+        formData.modules.forEach((mod) => {
+            mod.deliverables?.forEach((deliv, delivIndex) => {
+                if (deliv.date && !isValidDate(deliv.date)) {
+                    hasInvalidDates = true;
+                    alert(`Date invalide dans le module "${mod.label}", livrable ${delivIndex + 1}`);
+                }
+            });
+        });
+
+        if (hasInvalidDates) return;
+
+        // Nettoyer les données avant sauvegarde
         const cleanedData = {
             ...formData,
-            modules: formData.modules.map(mod => ({
-                ...mod,
-                content: mod.content.filter(line => line.trim())
-            }))
+            modules: formData.modules.map(mod => {
+                const { _uniqueId, ...moduleData } = mod;
+                return {
+                    ...moduleData,
+                    content: moduleData.content.filter(line => line.trim()),
+                    deliverables: (moduleData.deliverables || []).filter(d => 
+                        d.descriptif.trim() || d.date
+                    )
+                };
+            })
         };
+        
         onSave(cleanedData);
+        setOriginalData(JSON.parse(JSON.stringify(formData)));
+        setIsDirty(false);
+    };
+
+    const handleReset = () => {
+        if (window.confirm('Annuler toutes les modifications ?')) {
+            setFormData(JSON.parse(JSON.stringify(originalData)));
+            const { year, filiere } = parseKey(originalData.key);
+            setSelectedYear(year);
+            setSelectedFiliere(filiere);
+            setIsDirty(false);
+        }
     };
 
     const handleDelete = () => {
-        if (window.confirm(`Supprimer le programme "${formData.label}" ?`)) {
+        if (window.confirm(`⚠️ ATTENTION ⚠️\n\nSupprimer le programme "${formData.label}" ?\n\nCette action est IRRÉVERSIBLE et supprimera :\n- Le programme\n- Tous ses modules\n- Tous les livrables\n\nÊtes-vous sûr ?`)) {
             onDelete(selectedProgram.key);
         }
     };
 
+    const handleExportJSON = () => {
+        const dataStr = JSON.stringify(formData, null, 2);
+        const dataBlob = new Blob([dataStr], { type: 'application/json' });
+        const url = URL.createObjectURL(dataBlob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `program_${formData.key}_${Date.now()}.json`;
+        link.click();
+        URL.revokeObjectURL(url);
+    };
+
+    const handleImportJSON = () => {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.json';
+        input.onchange = (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                try {
+                    const imported = JSON.parse(event.target.result);
+                    
+                    const modulesWithIds = (imported.modules || []).map(mod => ({
+                        ...mod,
+                        _uniqueId: generateUniqueId()
+                    }));
+
+                    // Décomposer la clé importée
+                    const { year, filiere } = parseKey(imported.key);
+                    setSelectedYear(year);
+                    setSelectedFiliere(filiere);
+
+                    setFormData({
+                        key: imported.key || '',
+                        label: imported.label || '',
+                        description: imported.description || '',
+                        modules: modulesWithIds
+                    });
+                    alert('✅ Données importées avec succès !');
+                } catch (err) {
+                    alert('❌ Erreur lors de l\'importation : fichier JSON invalide');
+                    console.error(err);
+                }
+            };
+            reader.readAsText(file);
+        };
+        input.click();
+    };
+
     return (
         <div style={styles.editor}>
+            {/* Toolbar */}
             <div style={styles.header}>
-                <h3 style={styles.editorTitle}>
-                    Programme : <code>{selectedProgram.key}</code>
-                </h3>
-                <button
-                    type="button"
-                    onClick={() => setShowJsonPreview(!showJsonPreview)}
-                    style={styles.previewButton}
-                >
-                    {showJsonPreview ? '📝 Formulaire' : '👁️ JSON'}
-                </button>
+                <div style={styles.headerLeft}>
+                    <h3 style={styles.title}>
+                        Programme : <code>{selectedProgram.key}</code>
+                        {isDirty && <span style={styles.dirtyIndicator}>●</span>}
+                    </h3>
+                </div>
+
+                <div style={styles.headerRight}>
+                    <button
+                        type="button"
+                        onClick={handleSubmit}
+                        style={{
+                            ...styles.toolbarButton,
+                            ...styles.saveButton,
+                            ...(saving ? styles.buttonDisabled : {})
+                        }}
+                        disabled={saving}
+                        title="Sauvegarder"
+                    >
+                        {saving ? '⏳' : '💾'} Sauvegarder
+                    </button>
+
+                    {isDirty && (
+                        <button
+                            type="button"
+                            style={{...styles.toolbarButton, ...styles.resetButton}}
+                            onClick={handleReset}
+                            disabled={saving}
+                            title="Annuler les modifications"
+                        >
+                            ↩️ Annuler
+                        </button>
+                    )}
+
+                    <button
+                        type="button"
+                        onClick={handleImportJSON}
+                        style={styles.toolbarButton}
+                        title="Importer JSON"
+                    >
+                        📥
+                    </button>
+                    <button
+                        type="button"
+                        onClick={handleExportJSON}
+                        style={styles.toolbarButton}
+                        title="Exporter JSON"
+                    >
+                        📤
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setShowJsonPreview(!showJsonPreview)}
+                        style={styles.toolbarButton}
+                        title={showJsonPreview ? 'Voir le formulaire' : 'Voir le JSON'}
+                    >
+                        {showJsonPreview ? '📝' : '👁️'}
+                    </button>
+
+                    <div style={styles.divider}></div>
+
+                    <button
+                        type="button"
+                        style={{...styles.toolbarButton, ...styles.deleteButton}}
+                        onClick={handleDelete}
+                        disabled={saving}
+                        title="Supprimer le programme"
+                    >
+                        🗑️ Supprimer
+                    </button>
+                </div>
             </div>
 
             <ErrorMessage message={error} />
@@ -153,19 +380,12 @@ function ProgramEditor({
                     <section style={styles.section}>
                         <h4 style={styles.sectionTitle}>📋 Informations générales</h4>
 
-                        <div style={styles.field}>
-                            <label style={styles.label}>
-                                Clé du programme *
-                                <input
-                                    type="text"
-                                    value={formData.key}
-                                    onChange={(e) => handleFieldChange('key', e.target.value)}
-                                    style={styles.input}
-                                    placeholder="ex: A1, A2, B1"
-                                    required
-                                />
-                            </label>
-                        </div>
+                        <ProgramKeySelector
+                            year={selectedYear}
+                            filiere={selectedFiliere}
+                            onChange={handleKeyChange}
+                            generatedKey={formData.key}
+                        />
 
                         <div style={styles.field}>
                             <label style={styles.label}>
@@ -216,296 +436,24 @@ function ProgramEditor({
                             <div style={styles.modulesList}>
                                 {formData.modules.map((module, index) => (
                                     <ModuleCard
-                                        key={module.id || index}
+                                        key={module._uniqueId}
                                         module={module}
                                         index={index}
                                         totalModules={formData.modules.length}
                                         onChange={handleModuleChange}
                                         onRemove={removeModule}
-                                        onMove={moveModule}
+                                        onDuplicate={duplicateModule}
+                                        onDragStart={handleDragStart}
+                                        onDragOver={handleDragOver}
+                                        onDragEnd={handleDragEnd}
+                                        isDragging={draggedIndex === index}
                                     />
                                 ))}
                                 <div ref={modulesEndRef} />
                             </div>
                         )}
                     </section>
-
-                    {/* Actions */}
-                    <div style={styles.actions}>
-                        <button
-                            type="submit"
-                            style={{
-                                ...styles.saveButton,
-                                ...(saving ? styles.buttonDisabled : {})
-                            }}
-                            disabled={saving}
-                        >
-                            {saving ? '⏳ Sauvegarde…' : '💾 Sauvegarder'}
-                        </button>
-
-                        <button
-                            type="button"
-                            style={styles.deleteButton}
-                            onClick={handleDelete}
-                            disabled={saving}
-                        >
-                            🗑️ Supprimer
-                        </button>
-                    </div>
                 </form>
-            )}
-        </div>
-    );
-}
-
-// Composant pour chaque module
-function ModuleCard({ module, index, totalModules, onChange, onRemove, onMove }) {
-    const [isExpanded, setIsExpanded] = useState(true);
-
-    const months = [
-        { value: 1, label: 'Janvier' },
-        { value: 2, label: 'Février' },
-        { value: 3, label: 'Mars' },
-        { value: 4, label: 'Avril' },
-        { value: 5, label: 'Mai' },
-        { value: 6, label: 'Juin' },
-        { value: 7, label: 'Juillet' },
-        { value: 8, label: 'Août' },
-        { value: 9, label: 'Septembre' },
-        { value: 10, label: 'Octobre' },
-        { value: 11, label: 'Novembre' },
-        { value: 12, label: 'Décembre' },
-    ];
-
-    const getMonthLabel = (monthNum) => {
-        return months.find(m => m.value === monthNum)?.label || monthNum;
-    };
-
-    const handleLabelChange = (newLabel) => {
-        onChange(index, 'label', newLabel);
-        // Générer automatiquement l'ID si vide ou si c'était un slug de l'ancien label
-        if (!module.id || module.id === generateSlug(module.label)) {
-            onChange(index, 'id', generateSlug(newLabel));
-        }
-    };
-
-    const addDeliverable = () => {
-        const newDeliverables = [
-            ...(module.deliverables || []),
-            { descriptif: '', date: '' }
-        ];
-        onChange(index, 'deliverables', newDeliverables);
-    };
-
-    const updateDeliverable = (delivIndex, field, value) => {
-        const newDeliverables = module.deliverables.map((deliv, i) =>
-            i === delivIndex ? { ...deliv, [field]: value } : deliv
-        );
-        onChange(index, 'deliverables', newDeliverables);
-    };
-
-    const removeDeliverable = (delivIndex) => {
-        const newDeliverables = module.deliverables.filter((_, i) => i !== delivIndex);
-        onChange(index, 'deliverables', newDeliverables);
-    };
-
-    return (
-        <div style={styles.moduleCard}>
-            <div style={styles.moduleHeader}>
-                <button
-                    type="button"
-                    onClick={() => setIsExpanded(!isExpanded)}
-                    style={styles.expandButton}
-                >
-                    {isExpanded ? '▼' : '▶'}
-                </button>
-
-                <div style={styles.moduleHeaderInfo}>
-                    <h5 style={styles.moduleTitle}>
-                        {module.label || `Module ${index + 1}`}
-                    </h5>
-                    <span style={styles.modulePeriod}>
-                        {getMonthLabel(module.start_month)} → {getMonthLabel(module.end_month)}
-                    </span>
-                </div>
-
-                <div style={styles.moduleActions}>
-                    <button
-                        type="button"
-                        onClick={() => onMove(index, 'up')}
-                        disabled={index === 0}
-                        style={{
-                            ...styles.iconButton,
-                            ...(index === 0 ? styles.iconButtonDisabled : {})
-                        }}
-                        title="Monter"
-                    >
-                        ↑
-                    </button>
-                    <button
-                        type="button"
-                        onClick={() => onMove(index, 'down')}
-                        disabled={index === totalModules - 1}
-                        style={{
-                            ...styles.iconButton,
-                            ...(index === totalModules - 1 ? styles.iconButtonDisabled : {})
-                        }}
-                        title="Descendre"
-                    >
-                        ↓
-                    </button>
-                    <button
-                        type="button"
-                        onClick={() => onRemove(index)}
-                        style={styles.removeButton}
-                        title="Supprimer"
-                    >
-                        ✕
-                    </button>
-                </div>
-            </div>
-
-            {isExpanded && (
-                <div style={styles.moduleContent}>
-                    {/* Nom et ID inversés */}
-                    <div style={styles.row}>
-                        <div style={{ ...styles.field, flex: 3 }}>
-                            <label style={styles.label}>
-                                Nom du module *
-                                <input
-                                    type="text"
-                                    value={module.label}
-                                    onChange={(e) => handleLabelChange(e.target.value)}
-                                    style={styles.input}
-                                    placeholder="ex: Wordpress"
-                                    required
-                                />
-                            </label>
-                        </div>
-
-                        <div style={{ ...styles.field, flex: 2 }}>
-                            <label style={styles.label}>
-                                ID du module *
-                                <input
-                                    type="text"
-                                    value={module.id}
-                                    onChange={(e) => onChange(index, 'id', e.target.value)}
-                                    style={styles.input}
-                                    placeholder="Auto-généré depuis le nom"
-                                    required
-                                />
-                            </label>
-                        </div>
-                    </div>
-
-                    <div style={styles.row}>
-                        <div style={styles.field}>
-                            <label style={styles.label}>
-                                Mois de début *
-                                <select
-                                    value={module.start_month}
-                                    onChange={(e) => onChange(index, 'start_month', parseInt(e.target.value))}
-                                    style={styles.select}
-                                    required
-                                >
-                                    {months.map(m => (
-                                        <option key={m.value} value={m.value}>
-                                            {m.label}
-                                        </option>
-                                    ))}
-                                </select>
-                            </label>
-                        </div>
-
-                        <div style={styles.field}>
-                            <label style={styles.label}>
-                                Mois de fin *
-                                <select
-                                    value={module.end_month}
-                                    onChange={(e) => onChange(index, 'end_month', parseInt(e.target.value))}
-                                    style={styles.select}
-                                    required
-                                >
-                                    {months.map(m => (
-                                        <option key={m.value} value={m.value}>
-                                            {m.label}
-                                        </option>
-                                    ))}
-                                </select>
-                            </label>
-                        </div>
-                    </div>
-
-                    <div style={styles.field}>
-                        <label style={styles.label}>
-                            Contenu du module (un élément par ligne)
-                            <textarea
-                                value={module.content?.join('\n') || ''}
-                                onChange={(e) => onChange(
-                                    index,
-                                    'content',
-                                    e.target.value.split('\n')
-                                )}
-                                style={styles.textareaSmall}
-                                rows={4}
-                                placeholder="Installation, configuration et déploiement&#10;Gestion des plugins&#10;Thèmes personnalisés"
-                            />
-                        </label>
-                        <p style={styles.hint}>
-                            💡 Un élément par ligne. Ces contenus décrivent ce qui sera enseigné dans le module.
-                        </p>
-                    </div>
-
-                    {/* Section Deliverables */}
-                    <div style={styles.deliverablesSection}>
-                        <div style={styles.deliverableHeader}>
-                            <label style={styles.label}>📦 Livrables</label>
-                            <button
-                                type="button"
-                                onClick={addDeliverable}
-                                style={styles.addDeliverableButton}
-                            >
-                                + Ajouter un livrable
-                            </button>
-                        </div>
-
-                        {(!module.deliverables || module.deliverables.length === 0) ? (
-                            <p style={styles.emptyDeliverables}>
-                                Aucun livrable pour ce module.
-                            </p>
-                        ) : (
-                            <div style={styles.deliverablesList}>
-                                {module.deliverables.map((deliverable, delivIndex) => (
-                                    <div key={delivIndex} style={styles.deliverableItem}>
-                                        <div style={styles.deliverableFields}>
-                                            <input
-                                                type="text"
-                                                value={deliverable.descriptif}
-                                                onChange={(e) => updateDeliverable(delivIndex, 'descriptif', e.target.value)}
-                                                style={{ ...styles.input, flex: 2 }}
-                                                placeholder="Descriptif du livrable"
-                                            />
-                                            <input
-                                                type="datetime-local"
-                                                value={deliverable.date}
-                                                onChange={(e) => updateDeliverable(delivIndex, 'date', e.target.value)}
-                                                style={{ ...styles.input, flex: 1 }}
-                                            />
-                                        </div>
-                                        <button
-                                            type="button"
-                                            onClick={() => removeDeliverable(delivIndex)}
-                                            style={styles.removeDeliverableButton}
-                                            title="Supprimer ce livrable"
-                                        >
-                                            ✕
-                                        </button>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                    </div>
-                </div>
             )}
         </div>
     );
@@ -526,21 +474,67 @@ const styles = {
         justifyContent: 'space-between',
         alignItems: 'center',
         marginBottom: '1.5rem',
+        flexWrap: 'wrap',
+        gap: '1rem',
     },
-    editorTitle: {
+    headerLeft: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: '0.5rem',
+    },
+    headerRight: {
+        display: 'flex',
+        gap: '0.5rem',
+        flexWrap: 'wrap',
+    },
+    title: {
         margin: 0,
         fontSize: '1.1rem',
         fontWeight: 600,
         color: '#0f172a',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '0.5rem',
     },
-    previewButton: {
-        padding: '0.4rem 0.8rem',
+    dirtyIndicator: {
+        color: '#f59e0b',
+        fontSize: '1.5rem',
+    },
+    toolbarButton: {
+        padding: '0.5rem 1rem',
         background: '#f3f4f6',
         border: '1px solid #d1d5db',
         borderRadius: '0.5rem',
         cursor: 'pointer',
         fontSize: '0.85rem',
+        fontWeight: 500,
         transition: 'all 0.2s',
+        whiteSpace: 'nowrap',
+    },
+    saveButton: {
+        background: '#2563eb',
+        color: 'white',
+        border: '1px solid #1d4ed8',
+    },
+    resetButton: {
+        background: '#f59e0b',
+        color: 'white',
+        border: '1px solid #d97706',
+    },
+    deleteButton: {
+        background: '#dc2626',
+        color: 'white',
+        border: '1px solid #b91c1c',
+    },
+    divider: {
+        width: '1px',
+        height: '2rem',
+        background: '#d1d5db',
+        margin: '0 0.25rem',
+    },
+    buttonDisabled: {
+        opacity: 0.6,
+        cursor: 'not-allowed',
     },
     form: {
         display: 'flex',
@@ -569,11 +563,6 @@ const styles = {
     field: {
         marginBottom: '1rem',
     },
-    row: {
-        display: 'flex',
-        gap: '1rem',
-        marginBottom: '0.5rem',
-    },
     label: {
         display: 'block',
         fontSize: '0.85rem',
@@ -590,17 +579,6 @@ const styles = {
         fontSize: '0.9rem',
         transition: 'border-color 0.2s',
     },
-    select: {
-        width: '100%',
-        padding: '0.6rem',
-        marginTop: '0.3rem',
-        borderRadius: '0.5rem',
-        border: '1px solid #d1d5db',
-        fontSize: '0.9rem',
-        background: 'white',
-        cursor: 'pointer',
-        transition: 'border-color 0.2s',
-    },
     textarea: {
         width: '100%',
         padding: '0.6rem',
@@ -610,22 +588,6 @@ const styles = {
         fontSize: '0.9rem',
         fontFamily: 'inherit',
         resize: 'vertical',
-    },
-    textareaSmall: {
-        width: '100%',
-        padding: '0.5rem',
-        marginTop: '0.3rem',
-        borderRadius: '0.5rem',
-        border: '1px solid #d1d5db',
-        fontSize: '0.85rem',
-        fontFamily: 'inherit',
-        resize: 'vertical',
-    },
-    hint: {
-        margin: '0.3rem 0 0 0',
-        fontSize: '0.75rem',
-        color: '#6b7280',
-        fontStyle: 'italic',
     },
     addButton: {
         padding: '0.5rem 1rem',
@@ -643,184 +605,12 @@ const styles = {
         flexDirection: 'column',
         gap: '1rem',
     },
-    moduleCard: {
-        background: 'white',
-        border: '1px solid #e5e7eb',
-        borderRadius: '0.6rem',
-        overflow: 'hidden',
-    },
-    moduleHeader: {
-        display: 'flex',
-        alignItems: 'center',
-        gap: '0.8rem',
-        padding: '0.8rem 1rem',
-        background: '#f9fafb',
-        borderBottom: '1px solid #e5e7eb',
-    },
-    expandButton: {
-        background: 'none',
-        border: 'none',
-        cursor: 'pointer',
-        fontSize: '0.9rem',
-        padding: '0.2rem',
-        color: '#6b7280',
-    },
-    moduleHeaderInfo: {
-        flex: 1,
-        display: 'flex',
-        alignItems: 'center',
-        gap: '1rem',
-    },
-    moduleTitle: {
-        margin: 0,
-        fontSize: '0.9rem',
-        fontWeight: 600,
-        color: '#1e293b',
-    },
-    modulePeriod: {
-        fontSize: '0.75rem',
-        color: '#6b7280',
-        padding: '0.2rem 0.6rem',
-        background: '#f3f4f6',
-        borderRadius: '0.3rem',
-        fontWeight: 500,
-    },
-    moduleActions: {
-        display: 'flex',
-        gap: '0.4rem',
-    },
-    iconButton: {
-        width: '2rem',
-        height: '2rem',
-        background: '#f3f4f6',
-        border: '1px solid #d1d5db',
-        borderRadius: '0.4rem',
-        cursor: 'pointer',
-        fontSize: '0.9rem',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        transition: 'all 0.2s',
-    },
-    iconButtonDisabled: {
-        opacity: 0.4,
-        cursor: 'not-allowed',
-    },
-    removeButton: {
-        width: '2rem',
-        height: '2rem',
-        background: '#fee2e2',
-        border: '1px solid #fecaca',
-        borderRadius: '0.4rem',
-        cursor: 'pointer',
-        fontSize: '0.9rem',
-        color: '#dc2626',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        transition: 'all 0.2s',
-    },
-    moduleContent: {
-        padding: '1rem',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '0.3rem',
-    },
-    deliverablesSection: {
-        marginTop: '1rem',
-        padding: '1rem',
-        background: '#f9fafb',
-        borderRadius: '0.5rem',
-        border: '1px solid #e5e7eb',
-    },
-    deliverableHeader: {
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: '0.8rem',
-    },
-    addDeliverableButton: {
-        padding: '0.4rem 0.8rem',
-        background: '#3b82f6',
-        color: 'white',
-        border: 'none',
-        borderRadius: '0.4rem',
-        cursor: 'pointer',
-        fontSize: '0.8rem',
-        fontWeight: 500,
-        transition: 'background-color 0.2s',
-    },
-    deliverablesList: {
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '0.6rem',
-    },
-    deliverableItem: {
-        display: 'flex',
-        gap: '0.6rem',
-        alignItems: 'center',
-    },
-    deliverableFields: {
-        flex: 1,
-        display: 'flex',
-        gap: '0.6rem',
-    },
-    removeDeliverableButton: {
-        width: '2rem',
-        height: '2rem',
-        background: '#fee2e2',
-        border: '1px solid #fecaca',
-        borderRadius: '0.4rem',
-        cursor: 'pointer',
-        fontSize: '0.9rem',
-        color: '#dc2626',
-        flexShrink: 0,
-    },
-    emptyDeliverables: {
-        textAlign: 'center',
-        color: '#9ca3af',
-        fontSize: '0.85rem',
-        padding: '1rem',
-        fontStyle: 'italic',
-    },
     emptyModules: {
         textAlign: 'center',
         color: '#9ca3af',
         fontSize: '0.9rem',
         padding: '2rem',
         fontStyle: 'italic',
-    },
-    actions: {
-        display: 'flex',
-        gap: '1rem',
-        paddingTop: '1rem',
-        borderTop: '2px solid #e5e7eb',
-    },
-    saveButton: {
-        padding: '0.7rem 1.5rem',
-        background: '#2563eb',
-        color: 'white',
-        borderRadius: '0.5rem',
-        border: 'none',
-        cursor: 'pointer',
-        fontWeight: 500,
-        fontSize: '0.95rem',
-        transition: 'background-color 0.2s',
-    },
-    deleteButton: {
-        padding: '0.7rem 1.5rem',
-        background: '#dc2626',
-        color: 'white',
-        borderRadius: '0.5rem',
-        border: 'none',
-        cursor: 'pointer',
-        fontWeight: 500,
-        fontSize: '0.95rem',
-        transition: 'background-color 0.2s',
-    },
-    buttonDisabled: {
-        opacity: 0.6,
-        cursor: 'not-allowed',
     },
     emptyText: {
         textAlign: 'center',
