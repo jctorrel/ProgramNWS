@@ -3,9 +3,6 @@ import { useState, useEffect } from "react";
 
 const STORAGE_KEY = "mentor_admin_settings";
 
-const DEFAULT_SETTINGS = {
-    freeModeEnabled: true, // Par défaut activé
-};
 
 /**
  * Hook pour gérer les paramètres d'administration

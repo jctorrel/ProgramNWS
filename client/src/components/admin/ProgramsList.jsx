@@ -16,7 +16,7 @@ function ProgramsList({ programs, selectedKey, onSelect, onCreate }) {
                             key={program.key}
                             program={program}
                             isActive={program.key === selectedKey}
-                            onClick={() => onSelect(program.key)} // ✅ Passer la clé, pas l'objet
+                            onClick={() => onSelect(program.key)}
                         />
                     ))}
                 </ul>

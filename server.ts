@@ -1,5 +1,4 @@
 import { createServer } from "http";
-import fs from "node:fs";
 
 import buildApp from "./src/app";
 import { logger } from "./src/utils/logger";

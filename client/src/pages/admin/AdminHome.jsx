@@ -1,101 +1,155 @@
-// src/pages/AdminHome.jsx
-import { useNavigate } from "react-router-dom";
-
-import { useAdminAuth } from "../../hooks/useAdminAuth";
-import { useAdminConfig } from "../../hooks/useAdminConfig";
-import AdminHeader from "../../components/admin/AdminHeader";
-import AdminSection from "../../components/admin/AdminSection";
-import ConfigForm from "../../components/admin/ConfigForm";
-import AdminPromptsSection from "./AdminPromptsSection";
-import AdminProgramsSection from "./AdminProgramsSection";
-import AdminFreeModeSection from "../../components/admin/AdminFreeModeSection";
-import { LoadingState, AccessDenied } from "../../components/admin/AdminStatus";
+// src/pages/admin/AdminHome.jsx
+import { useState } from "react";
+import { usePrograms } from "../../hooks/usePrograms";
+import { useProgramEditor } from "../../hooks/useProgramEditor";
+import ProgramsList from "../../components/admin/ProgramsList";
+import ProgramEditor from "../../components/admin/ProgramEditor";
 
 function AdminHome() {
-    const navigate = useNavigate();
-    const { loading, isAdmin, error: authError, config: initialConfig } = useAdminAuth();
-    const { 
-        config, 
-        saving, 
-        saveMessage, 
-        error: saveError, 
-        updateField, 
-        saveConfig 
-    } = useAdminConfig(initialConfig);
+    const [actionError, setActionError] = useState(null);
 
+    const {
+        programs,
+        loading,
+        error: loadError,
+        selectedProgram,
+        selectProgram,
+        createProgram,
+        deleteProgram: deleteProgramFromList,
+        refreshPrograms,
+    } = usePrograms();
+
+    const {
+        saving,
+        saveMessage,
+        error: saveError,
+        save,
+        deleteProgram,
+        clearMessages,
+    } = useProgramEditor(refreshPrograms);
+
+    /**
+     * Gère la création d'un nouveau programme
+     */
+    const handleCreate = async () => {
+        setActionError(null);
+        clearMessages();
+
+        const key = prompt("Clé du nouveau programme (ex: A2, B1…) :");
+        if (!key) return;
+
+        try {
+            await createProgram(key.trim());
+        } catch (error) {
+            setActionError(error.message);
+        }
+    };
+
+    /**
+     * Gère la suppression d'un programme
+     */
+    const handleDelete = async (programKey) => {
+        setActionError(null);
+
+        try {
+            await deleteProgram(programKey);
+            // Après suppression, désélectionner le programme
+            selectProgram(null);
+        } catch (error) {
+            setActionError(error.message);
+        }
+    };
+
+    if (loading) {
+        return (
+            <section style={styles.section}>
+                <h2 style={styles.title}>Programmes</h2>
+                <p style={styles.loadingText}>Chargement…</p>
+            </section>
+        );
+    }
+
+    // Afficher l'erreur de chargement
+    if (loadError) {
+        return (
+            <section style={styles.section}>
+                <h2 style={styles.title}>Programmes</h2>
+                <p style={styles.errorText}>{loadError}</p>
+            </section>
+        );
+    }
+
+    // Combiner les erreurs d'action et de sauvegarde
+    const displayError = actionError || saveError;
+
+    
+    console.log('selectedProgram dans AdminProgramsSection:', selectedProgram); 
     return (
-        <div style={styles.page}>
-            <div style={styles.card}>
-                <AdminHeader />
+        <section style={styles.section}>
+            <h2 style={styles.title}>Programmes</h2>
+            <p style={styles.help}>
+                Sélectionne un programme dans la liste pour l'éditer.
+            </p>
 
-                <button
-                    type="button"
-                    style={styles.buttonSecondary}
-                    onClick={() => navigate("/")}
-                >
-                    ← Retour à l'application
-                </button>
+            {displayError && <p style={styles.errorText}>{displayError}</p>}
 
-                {loading && <LoadingState />}
+            <div style={styles.layout}>
+                <ProgramsList
+                    programs={programs}
+                    selectedKey={selectedProgram?.key}
+                    onSelect={selectProgram}
+                    onCreate={handleCreate}
+                />
 
-                {!loading && !isAdmin && <AccessDenied />}
-
-                {!loading && isAdmin && (
-                    <>
-                        <ConfigForm
-                            config={config}
-                            saving={saving}
-                            saveMessage={saveMessage}
-                            error={saveError}
-                            onFieldChange={updateField}
-                            onSave={saveConfig}
-                        />
-
-                        {/* Section Mode Libre */}
-                        <AdminSection title="Interface Étudiants">
-                            <AdminFreeModeSection />
-                        </AdminSection>
-
-                        <AdminSection title="Prompts">
-                            <AdminPromptsSection />
-                        </AdminSection>
-
-                        <AdminProgramsSection />
-                    </>
-                )}
+                <ProgramEditor
+                    selectedProgram={selectedProgram}
+                    onSave={save}
+                    onDelete={handleDelete}
+                    saving={saving}
+                    saveMessage={saveMessage}
+                    error={saveError}
+                />
             </div>
-        </div>
+        </section>
     );
 }
 
 const styles = {
-    page: {
-        minHeight: "100vh",
+    section: {
+        padding: "2.5rem",
+        borderTop: "1px solid #e5e7eb",
+    },
+    title: {
+        margin: 0,
+        marginBottom: "0.5rem",
+        fontSize: "1.1rem",
+        fontWeight: 600,
+        color: "#0f172a",
+    },
+    help: {
+        marginTop: 0,
+        marginBottom: "1rem",
+        fontSize: "0.9rem",
+        color: "#6b7280",
+    },
+    layout: {
         display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-        background:
-            "radial-gradient(circle at top, #e0f2fe 0, #f8fafc 40%, #e5e7eb 100%)",
-        padding: "1rem",
-        fontFamily:
-            "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+        gap: "1rem",
+        alignItems: "stretch",
     },
-    card: {
-        backgroundColor: "white",
-        borderRadius: "1.5rem",
-        padding: "2rem",
-        maxWidth: "900px",
-        width: "100%",
-        boxShadow: "0 20px 40px rgba(15, 23, 42, 0.12)",
+    loadingText: {
+        fontSize: "0.9rem",
+        color: "#64748b",
     },
-    buttonSecondary: {
-        padding: "0.5rem 0.9rem",
-        borderRadius: "999px",
-        border: "1px solid #cbd5f5",
-        backgroundColor: "#f8fafc",
-        fontSize: "0.85rem",
-        cursor: "pointer",
-        transition: "background-color 0.2s",
+    errorText: {
+        fontSize: "0.9rem",
+        color: "#dc2626",
+        marginTop: "0.5rem",
+    },
+    successText: {
+        fontSize: "0.9rem",
+        color: "#16a34a",
+        marginTop: "0.5rem",
     },
 };
 

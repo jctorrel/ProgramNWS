@@ -1,10 +1,4 @@
 // src/utils/programs.ts
-import { logger } from "./logger";
-import render from "./prompts";
-import { getPromptContent } from "../db/prompts";
-import getEnv from "./env";
-import { getProgram } from "../db/programs";
-import { AuthRequest } from "../middleware/authMiddleware";
 
 export type Deliverable = {
   descriptif: string;
@@ -17,7 +11,7 @@ export type ProgramModule = {
   start_month: number;
   end_month: number;
   content: string[];
-  deliverables?: Deliverable[]; // Optionnel pour rétrocompatibilité
+  deliverables?: Deliverable[];
 };
 
 export type Program = {
@@ -25,7 +19,6 @@ export type Program = {
   label: string;
   description?: string;
   modules: ProgramModule[];
-  // Champs optionnels pour rétrocompatibilité
   objectives?: string;
   level?: string;
   resources?: string[];
@@ -33,13 +26,11 @@ export type Program = {
 
 export type Programs = Record<string, Program>;
 
-const programsPromptTemplate = getEnv("PROGRAMS_PROMPT_TEMPLATE");
-
 export async function getActiveModules(
   program: Program,
   date: Date = new Date()
 ): Promise<ProgramModule[]> {
-  const currentMonth = date.getMonth() + 1; // JS: 0 = janvier → +1
+  const currentMonth = date.getMonth() + 1; 
 
   return program.modules.filter((module) => {
     const start = module.start_month;
@@ -91,58 +82,6 @@ function formatDeliverable(deliverable: Deliverable): string {
   });
   
   return `${deliverable.descriptif} (échéance: ${dateStr})`;
-}
-
-export async function getProgramPrompt(
-  programID: string,
-  req: AuthRequest,
-  date: Date = new Date()
-): Promise<string> {
-  if (!req.session.initialized) {
-    const program = await getProgram(programID);
-
-    if (!program || !Array.isArray(program.modules)) {
-      logger.error(`Programme introuvable ou invalide pour l'ID : ${programID}`);
-      return "";
-    }
-
-    const programSystemTemplate: string | null = await getPromptContent(
-      programsPromptTemplate
-    );
-    const modules: ProgramModule[] = await getActiveModules(program, date);
-
-    if (!programSystemTemplate) {
-      logger.error(`Prompt programme introuvable pour la clé : ${programsPromptTemplate}`);
-      throw new Error(`Prompt programme introuvable pour la clé : ${programsPromptTemplate}`);
-    }
-
-    // Construction du contexte des modules avec deliverables
-    const modulesContext = modules.map((module) => {
-      let moduleStr = `- ${module.label} : ${module.content.join(", ")}`;
-      
-      // Ajout des livrables à venir si présents
-      const upcomingDeliverables = getUpcomingDeliverables(module, date);
-      if (upcomingDeliverables.length > 0) {
-        const deliverablesStr = upcomingDeliverables
-          .map((d) => `  • ${formatDeliverable(d)}`)
-          .join("\n");
-        moduleStr += `\n  Livrables à venir :\n${deliverablesStr}`;
-      }
-      
-      return moduleStr;
-    }).join("\n");
-
-    return render(programSystemTemplate, {
-      program_label: program.label,
-      program_description: program.description || "",
-      program_objective: program.objectives || "",
-      program_level: program.level || "",
-      program_resources: program.resources?.join(", ") || "",
-      program_modules: modulesContext,
-    });
-  } else {
-    return !req.session.module ? "" : "Focus : " + moduleToString(req.session.module, date);
-  }
 }
 
 function moduleToString(module: ProgramModule, date: Date = new Date()): string {
