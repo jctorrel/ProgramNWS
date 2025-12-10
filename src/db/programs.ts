@@ -1,6 +1,7 @@
 // src/db/programs.ts
 import { logger } from "../utils/logger";
 import { getDb } from "./db";
+import crypto from 'crypto';
 
 export interface Deliverable {
   descriptif: string;
@@ -17,14 +18,15 @@ export interface ProgramModule {
 }
 
 export interface Program {
-  key: string;          // "A1", "B2", etc.
+  key: string;
   label: string;
   description?: string;
   modules: ProgramModule[];
-  // Champs optionnels pour rétrocompatibilité
   objectives?: string;
-  level?: string;
   resources?: string[];
+  published?: boolean;
+  publishToken?: string | null;
+  publishedAt?: Date | null;
   updatedAt: Date;
   createdAt: Date;
 }
@@ -159,4 +161,109 @@ export async function getProgramModule(
   }
 
   return program.modules.find((m) => m.id === moduleId) || null;
+}
+
+// ========================================
+// FONCTIONS DE PUBLICATION
+// ========================================
+
+/**
+ * Génère un token de publication sécurisé
+ */
+export function generatePublishToken(): string {
+  return crypto.randomBytes(32).toString('hex'); // 64 caractères
+}
+
+/**
+ * Publie un programme et génère un token
+ */
+export async function publishProgram(key: string): Promise<{ publishToken: string; publishedAt: Date }> {
+  const db = getDb();
+  const publishToken = generatePublishToken();
+  const publishedAt = new Date();
+
+  await db.collection<Program>(COLLECTION).updateOne(
+    { key },
+    {
+      $set: {
+        published: true,
+        publishToken,
+        publishedAt
+      }
+    }
+  );
+
+  logger.info(`Programme ${key} publié avec le token ${publishToken}`);
+
+  return { publishToken, publishedAt };
+}
+
+/**
+ * Dépublie un programme
+ */
+export async function unpublishProgram(key: string): Promise<void> {
+  const db = getDb();
+  
+  await db.collection<Program>(COLLECTION).updateOne(
+    { key },
+    {
+      $set: {
+        published: false,
+        publishToken: null,
+        publishedAt: null
+      }
+    }
+  );
+
+  logger.info(`Programme ${key} dépublié`);
+}
+
+/**
+ * Régénère le token de publication
+ */
+export async function regeneratePublishToken(key: string): Promise<string> {
+  const db = getDb();
+  const publishToken = generatePublishToken();
+
+  await db.collection<Program>(COLLECTION).updateOne(
+    { key },
+    {
+      $set: {
+        publishToken,
+        publishedAt: new Date()
+      }
+    }
+  );
+
+  logger.info(`Token régénéré pour le programme ${key}: ${publishToken}`);
+
+  return publishToken;
+}
+
+/**
+ * Récupère un programme publié par son token
+ */
+export async function getProgramByToken(token: string): Promise<Program | null> {
+  const db = getDb();
+  
+  const program = await db.collection<Program>(COLLECTION).findOne({
+    publishToken: token,
+    published: true
+  });
+
+  return program;
+}
+
+/**
+ * Vérifie si un programme est publié
+ */
+export async function isProgramPublished(key: string): Promise<boolean> {
+  const db = getDb();
+  
+  const program = await db.collection<Program>(COLLECTION).findOne({ 
+    key, 
+    published: true 
+  });
+  
+  return !!program;
 }

@@ -4,6 +4,8 @@ import { ErrorMessage, SuccessMessage } from "./AdminStatus";
 import ProgramKeySelector from './ProgramKeySelector';
 import ModuleCard from './ModuleCard';
 import { generateUniqueId, parseKey, generateKey, isValidDate } from '../../utils/constants';
+import { apiFetch } from '../../utils/api';
+import PublishModal from './PublishModal';
 
 function ProgramEditor({
     selectedProgram,
@@ -12,6 +14,9 @@ function ProgramEditor({
     error,
     onSave,
     onDelete,
+    publishProgram,
+    unpublishProgram,
+    regeneratePublishToken,
 }) {
     const [formData, setFormData] = useState({
         key: '',
@@ -26,6 +31,12 @@ function ProgramEditor({
     const [isDirty, setIsDirty] = useState(false);
     const [draggedIndex, setDraggedIndex] = useState(null);
     const modulesEndRef = useRef(null);
+    const [showPublishModal, setShowPublishModal] = useState(false);
+    const [publishStatus, setPublishStatus] = useState({
+        published: false,
+        publishToken: null,
+        publishedAt: null
+    });
 
     // Charger le programme sélectionné
     useEffect(() => {
@@ -68,6 +79,20 @@ function ProgramEditor({
             setIsDirty(hasChanges);
         }
     }, [formData, originalData]);
+
+    // Charger le statut de publication avec le programme
+    useEffect(() => {
+        if (selectedProgram) {
+            // ... code existant ...
+
+            // Charger le statut de publication
+            setPublishStatus({
+                published: selectedProgram.published || false,
+                publishToken: selectedProgram.publishToken || null,
+                publishedAt: selectedProgram.publishedAt || null
+            });
+        }
+    }, [selectedProgram]);
 
     if (!selectedProgram) {
         return (
@@ -171,23 +196,23 @@ function ProgramEditor({
 
     const handleSubmit = (e) => {
         if (e) e.preventDefault();
-        
+
         // Validation de la clé
         if (!selectedYear) {
             alert('❌ Veuillez sélectionner une année');
             return;
         }
-        
+
         if (selectedYear !== '1' && !selectedFiliere) {
             alert('❌ Veuillez sélectionner une filière pour cette année');
             return;
         }
-        
+
         if (!formData.key) {
             alert('❌ La clé du programme n\'a pas pu être générée');
             return;
         }
-        
+
         // Validation des dates de livrables
         let hasInvalidDates = false;
         formData.modules.forEach((mod) => {
@@ -209,13 +234,13 @@ function ProgramEditor({
                 return {
                     ...moduleData,
                     content: moduleData.content.filter(line => line.trim()),
-                    deliverables: (moduleData.deliverables || []).filter(d => 
+                    deliverables: (moduleData.deliverables || []).filter(d =>
                         d.descriptif.trim() || d.date
                     )
                 };
             })
         };
-        
+
         onSave(cleanedData);
         setOriginalData(JSON.parse(JSON.stringify(formData)));
         setIsDirty(false);
@@ -260,7 +285,7 @@ function ProgramEditor({
             reader.onload = (event) => {
                 try {
                     const imported = JSON.parse(event.target.result);
-                    
+
                     const modulesWithIds = (imported.modules || []).map(mod => ({
                         ...mod,
                         _uniqueId: generateUniqueId()
@@ -286,6 +311,41 @@ function ProgramEditor({
             reader.readAsText(file);
         };
         input.click();
+    };
+
+    // Fonctions de publication
+    const handlePublish = async () => {
+        try {
+            const data = await publishProgram(selectedProgram.key);
+            alert('✅ Syllabus publié avec succès !');
+            // Les données sont déjà rafraîchies par le hook
+        } catch (err) {
+            console.error('Erreur publication:', err);
+            alert(`❌ ${err.message}`);
+        }
+    };
+
+    const handleUnpublish = async () => {
+        try {
+            await unpublishProgram(selectedProgram.key);
+            alert('✅ Syllabus dépublié');
+            setShowPublishModal(false);
+            // Les données sont déjà rafraîchies par le hook
+        } catch (err) {
+            console.error('Erreur dépublication:', err);
+            alert(`❌ ${err.message}`);
+        }
+    };
+
+    const handleRegenerateToken = async () => {
+        try {
+            const data = await regeneratePublishToken(selectedProgram.key);
+            alert('✅ Nouveau lien généré !');
+            // Les données sont déjà rafraîchies par le hook
+        } catch (err) {
+            console.error('Erreur régénération:', err);
+            alert(`❌ ${err.message}`);
+        }
     };
 
     return (
@@ -314,10 +374,23 @@ function ProgramEditor({
                         {saving ? '⏳' : '💾'} Sauvegarder
                     </button>
 
+                    <button
+                        type="button"
+                        style={{
+                            ...styles.toolbarButton,
+                            ...styles.publishButton,
+                            ...(selectedProgram?.published ? styles.publishedButton : {})
+                        }}
+                        onClick={() => setShowPublishModal(true)}
+                        title={selectedProgram?.published ? "Gérer la publication" : "Publier le syllabus"}
+                    >
+                        {selectedProgram?.published ? '✅ Publié' : '📤 Publier'}
+                    </button>
+
                     {isDirty && (
                         <button
                             type="button"
-                            style={{...styles.toolbarButton, ...styles.resetButton}}
+                            style={{ ...styles.toolbarButton, ...styles.resetButton }}
                             onClick={handleReset}
                             disabled={saving}
                             title="Annuler les modifications"
@@ -355,7 +428,7 @@ function ProgramEditor({
 
                     <button
                         type="button"
-                        style={{...styles.toolbarButton, ...styles.deleteButton}}
+                        style={{ ...styles.toolbarButton, ...styles.deleteButton }}
                         onClick={handleDelete}
                         disabled={saving}
                         title="Supprimer le programme"
@@ -454,6 +527,15 @@ function ProgramEditor({
                         )}
                     </section>
                 </form>
+            )}
+            {showPublishModal && selectedProgram && (
+                <PublishModal
+                    program={selectedProgram}
+                    onClose={() => setShowPublishModal(false)}
+                    onPublish={handlePublish}
+                    onUnpublish={handleUnpublish}
+                    onRegenerateToken={handleRegenerateToken}
+                />
             )}
         </div>
     );
@@ -631,6 +713,16 @@ const styles = {
         margin: 0,
         fontFamily: 'monospace',
     },
+    publishButton: {
+        background: '#6c3df4',
+        color: 'white',
+        border: '1px solid #5b32d6',
+    },
+    publishedButton: {
+        background: '#10b981',
+        border: '1px solid #059669',
+    },
+
 };
 
 export default ProgramEditor;

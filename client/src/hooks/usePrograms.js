@@ -52,20 +52,17 @@ export function usePrograms() {
      * Sélectionne un programme par sa clé
      */
     const selectProgram = (key) => {
-    console.log('selectProgram appelé avec key:', key); // ✅ Ajoute ça
-    setState(prev => {
-        console.log('Programs disponibles:', prev.programs); // ✅ Et ça
-        const program = prev.programs.find((p) => p.key === key);
-        console.log('Programme trouvé:', program); // ✅ Et ça
-        if (program) {
-            return {
-                ...prev,
-                selectedProgram: program,
-            };
-        }
-        return prev;
-    });
-};
+        setState(prev => {
+            const program = prev.programs.find((p) => p.key === key);
+            if (program) {
+                return {
+                    ...prev,
+                    selectedProgram: program,
+                };
+            }
+            return prev;
+        });
+    };
 
     /**
      * Crée un nouveau programme
@@ -152,6 +149,80 @@ export function usePrograms() {
         }
     };
 
+    // ============================================
+    // FONCTIONS DE PUBLICATION
+    // ============================================
+
+    /**
+     * Publie un programme et génère un token
+     */
+    const publishProgram = async (key) => {
+        if (!key) {
+            throw new Error("Aucun programme sélectionné");
+        }
+
+        try {
+            const data = await apiFetch(`/api/admin/programs/${key}/publish`, {
+                method: "POST",
+            });
+
+            // Rafraîchir la liste pour avoir le statut publié à jour
+            await refreshPrograms();
+
+            return data; // { publishToken, publishedAt, publicUrl }
+        } catch (error) {
+            throw new Error(
+                error?.message || "Impossible de publier le programme"
+            );
+        }
+    };
+
+    /**
+     * Dépublie un programme
+     */
+    const unpublishProgram = async (key) => {
+        if (!key) {
+            throw new Error("Aucun programme sélectionné");
+        }
+
+        try {
+            await apiFetch(`/api/admin/programs/${key}/unpublish`, {
+                method: "POST",
+            });
+
+            // Rafraîchir la liste pour avoir le statut dépublié à jour
+            await refreshPrograms();
+        } catch (error) {
+            throw new Error(
+                error?.message || "Impossible de dépublier le programme"
+            );
+        }
+    };
+
+    /**
+     * Régénère le token de publication d'un programme
+     */
+    const regeneratePublishToken = async (key) => {
+        if (!key) {
+            throw new Error("Aucun programme sélectionné");
+        }
+
+        try {
+            const data = await apiFetch(`/api/admin/programs/${key}/regenerate-token`, {
+                method: "POST",
+            });
+
+            // Rafraîchir la liste pour avoir le nouveau token
+            await refreshPrograms();
+
+            return data; // { publishToken, publicUrl }
+        } catch (error) {
+            throw new Error(
+                error?.message || "Impossible de régénérer le token"
+            );
+        }
+    };
+
     return {
         programs: state.programs,
         loading: state.loading,
@@ -161,5 +232,9 @@ export function usePrograms() {
         createProgram,
         deleteProgram,
         refreshPrograms,
+        // Nouvelles fonctions de publication
+        publishProgram,
+        unpublishProgram,
+        regeneratePublishToken,
     };
 }
