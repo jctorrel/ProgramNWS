@@ -6,9 +6,7 @@ import path from "node:path";
 import { initMongo } from "./db/db";
 import createApiRouter from "./routes/index";
 import getEnv from "./utils/env";
-import { logger } from "./utils/logger";
 import { listPrograms } from "./db/programs";
-import type { ProgramModule } from "./utils/programs";
 
 
 // DB
@@ -41,8 +39,7 @@ export default async function buildApp(): Promise<express.Express> {
 
   // Routes
   app.use("/api", createApiRouter({
-    openai,
-    programs
+    openai
   }));
 
   // Catch-all pour React Router (après les routes API)

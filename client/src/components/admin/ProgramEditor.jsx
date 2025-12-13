@@ -1,10 +1,11 @@
 // src/components/admin/ProgramEditor.jsx
 import { useState, useEffect, useRef } from 'react';
 import { ErrorMessage, SuccessMessage } from "./AdminStatus";
+import { useAI } from "../../hooks/useAI";
 import ProgramKeySelector from './ProgramKeySelector';
 import ModuleCard from './ModuleCard';
+import InputBar from './InputBar';
 import { generateUniqueId, parseKey, generateKey, isValidDate } from '../../utils/constants';
-import { apiFetch } from '../../utils/api';
 import PublishModal from './PublishModal';
 
 function ProgramEditor({
@@ -37,6 +38,8 @@ function ProgramEditor({
         publishToken: null,
         publishedAt: null
     });
+    const [inputValue, setInputValue] = useState('');
+    const { modifyProgram, loading } = useAI();
 
     // Charger le programme sélectionné
     useEffect(() => {
@@ -302,7 +305,6 @@ function ProgramEditor({
                         description: imported.description || '',
                         modules: modulesWithIds
                     });
-                    alert('✅ Données importées avec succès !');
                 } catch (err) {
                     alert('❌ Erreur lors de l\'importation : fichier JSON invalide');
                     console.error(err);
@@ -317,8 +319,6 @@ function ProgramEditor({
     const handlePublish = async () => {
         try {
             const data = await publishProgram(selectedProgram.key);
-            alert('✅ Syllabus publié avec succès !');
-            // Les données sont déjà rafraîchies par le hook
         } catch (err) {
             console.error('Erreur publication:', err);
             alert(`❌ ${err.message}`);
@@ -328,7 +328,6 @@ function ProgramEditor({
     const handleUnpublish = async () => {
         try {
             await unpublishProgram(selectedProgram.key);
-            alert('✅ Syllabus dépublié');
             setShowPublishModal(false);
             // Les données sont déjà rafraîchies par le hook
         } catch (err) {
@@ -340,11 +339,31 @@ function ProgramEditor({
     const handleRegenerateToken = async () => {
         try {
             const data = await regeneratePublishToken(selectedProgram.key);
-            alert('✅ Nouveau lien généré !');
-            // Les données sont déjà rafraîchies par le hook
         } catch (err) {
             console.error('Erreur régénération:', err);
             alert(`❌ ${err.message}`);
+        }
+    };
+
+    const handleAISubmit = async (e) => {
+        e.preventDefault();
+
+        if (!inputValue.trim() || loading) return;
+
+        // Envoyer le formData actuel à l'IA
+        const result = await modifyProgram(inputValue, formData); // 👈 formData
+
+        if (result.success) {
+            // Mettre à jour le formData avec le programme modifié
+            setFormData(result.program); // 👈 setFormData
+
+            // Marquer comme modifié (pour activer le bouton Sauvegarder)
+            setIsDirty(true);
+
+            // Réinitialiser l'input
+            setInputValue('');
+        } else {
+            alert(`Erreur: ${result.error}`);
         }
     };
 
@@ -536,6 +555,25 @@ function ProgramEditor({
                     onUnpublish={handleUnpublish}
                     onRegenerateToken={handleRegenerateToken}
                 />
+            )}
+
+            <InputBar
+                value={inputValue}
+                onChange={setInputValue}
+                onSubmit={handleAISubmit}
+                disabled={loading}
+                shouldShowModules={false}
+                placeholder={loading
+                    ? "Modification en cours..."
+                    : "Tapez vos instructions pour modifier le programme ..."
+                }
+            />
+
+            {/* Affichage erreur */}
+            {error && (
+                <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm">
+                    ⚠️ {error}
+                </div>
             )}
         </div>
     );

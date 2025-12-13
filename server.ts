@@ -32,6 +32,6 @@ async function main() {
 }
 
 main().catch((err) => {
-    console.error("❌ Erreur au démarrage du server :", err);
+    logger.error("❌ Erreur au démarrage du server :", err);
     process.exit(1);
 });

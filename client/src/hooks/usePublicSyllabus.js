@@ -50,14 +50,10 @@ export function usePublicSyllabus(token) {
      * Charge le syllabus depuis l'API publique
      */
     const loadSyllabus = async (token) => {
-        try {
-            console.log("🔍 Chargement du syllabus avec token:", token);
-            
+        try {            
             // Utiliser fetch direct (route publique, pas d'auth)
             const response = await fetch(`/api/syllabus/${token}`);
             
-            console.log("📡 Response status:", response.status);
-
             // Gérer les différentes erreurs
             if (!response.ok) {
                 let errorCode = "server_error";
@@ -90,7 +86,6 @@ export function usePublicSyllabus(token) {
 
             // Parse la réponse
             const data = await response.json();
-            console.log("✅ Syllabus chargé:", data);
 
             setState({
                 program: data,

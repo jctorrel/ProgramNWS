@@ -63,7 +63,6 @@ function Login() {
                 // Redirection vers l’app (MentorChatApp)
                 window.location.href = "/";
             } catch (e) {
-                console.error(e);
                 setError(e.message || "Une erreur est survenue");
             } finally {
                 setLoading(false);

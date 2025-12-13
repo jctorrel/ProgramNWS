@@ -1,6 +1,7 @@
 // src/routes/admin/programs.ts - VERSION COMPLÈTE avec publication
 import express from "express";
 import { logger } from "../../utils/logger";
+import { AuthRequest } from "../../middleware/authMiddleware";
 import {
   listPrograms,
   getProgram,
@@ -15,7 +16,7 @@ export default function createProgramsRouter(): express.Router {
   const router = express.Router();
 
   // GET /api/admin/programs
-  router.get("/", async (_req, res) => {
+  router.get("/", async (_req: AuthRequest, res) => {
     try {
       const programs = await listPrograms();
       res.json(programs);

@@ -41,11 +41,5 @@ export async function apiFetch(url, options = {}) {
 
     throw new Error((data && data.error) || "Unauthorized");
   }
-
-  // Erreur quota mensuel dépassé
-  if (res.status === 429) {
-    console.error("Quota mensuel dépassé");
-  }
-
   return data;
 }
