@@ -1,7 +1,10 @@
 // src/components/admin/ProgramKeySelector.jsx
-import { ANNEES, FILIERES } from './../../utils/constants';
+import React from 'react';
+import { ChevronDown, Info, Key, Fingerprint } from 'lucide-react';
+import { ANNEES, FILIERES } from '../../utils/constants';
 
 function ProgramKeySelector({ year, filiere, onChange, generatedKey }) {
+    
     const handleYearChange = (newYear) => {
         onChange({
             year: newYear,
@@ -16,133 +19,98 @@ function ProgramKeySelector({ year, filiere, onChange, generatedKey }) {
         });
     };
 
+    const isYearOne = year === '1';
+
     return (
-        <div style={styles.container}>
-            <div style={styles.row}>
-                <div style={styles.field}>
-                    <label style={styles.label}>
-                        Année *
+        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm mb-6">
+            <div className="flex items-center gap-2 mb-4 text-slate-800 font-semibold text-sm uppercase tracking-wider">
+                <Fingerprint size={18} className="text-nws-purple" />
+                Configuration du Programme
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* --- Sélecteur ANNÉE --- */}
+                <div className="space-y-2">
+                    <label className="block text-sm font-medium text-slate-700">
+                        Année du cursus <span className="text-red-500">*</span>
+                    </label>
+                    <div className="relative">
                         <select
                             value={year}
                             onChange={(e) => handleYearChange(e.target.value)}
-                            style={styles.select}
+                            className="w-full appearance-none pl-4 pr-10 py-2.5 rounded-xl border border-slate-300 bg-white text-slate-900 text-sm focus:border-nws-purple focus:ring-4 focus:ring-nws-purple/10 outline-none transition-all cursor-pointer shadow-sm hover:border-slate-400"
                             required
                         >
-                            <option value="">Sélectionner une année</option>
+                            <option value="">-- Choisir une année --</option>
                             {ANNEES.map(a => (
                                 <option key={a.value} value={a.value}>
                                     {a.label}
                                 </option>
                             ))}
                         </select>
-                    </label>
+                        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={18} />
+                    </div>
                 </div>
 
-                <div style={styles.field}>
-                    <label style={styles.label}>
-                        Filière {year !== '1' && '*'}
+                {/* --- Sélecteur FILIÈRE --- */}
+                <div className="space-y-2">
+                    <label className={`block text-sm font-medium transition-colors ${isYearOne ? 'text-slate-400' : 'text-slate-700'}`}>
+                        Filière de spécialisation {!isYearOne && <span className="text-red-500">*</span>}
+                    </label>
+                    
+                    <div className="relative">
                         <select
                             value={filiere}
                             onChange={(e) => handleFiliereChange(e.target.value)}
-                            style={{
-                                ...styles.select,
-                                ...(year === '1' ? styles.selectDisabled : {})
-                            }}
-                            required={year !== '1'}
-                            disabled={year === '1'}
+                            disabled={isYearOne}
+                            className={`
+                                w-full appearance-none pl-4 pr-10 py-2.5 rounded-xl border text-sm outline-none transition-all shadow-sm
+                                ${isYearOne 
+                                    ? "bg-slate-50 border-slate-200 text-slate-400 cursor-not-allowed" 
+                                    : "bg-white border-slate-300 text-slate-900 cursor-pointer hover:border-slate-400 focus:border-nws-purple focus:ring-4 focus:ring-nws-purple/10"
+                                }
+                            `}
+                            required={!isYearOne}
                         >
                             <option value="">
-                                {year === '1' ? 'Pas de filière en Année 1' : 'Sélectionner une filière'}
+                                {isYearOne ? 'Pas de filière (Tronc commun)' : '-- Choisir une filière --'}
                             </option>
                             {FILIERES.map(f => (
                                 <option key={f.code} value={f.code}>
-                                    {f.label} [{f.code}]
+                                    {f.label} ({f.code})
                                 </option>
                             ))}
                         </select>
-                    </label>
-                    {year === '1' && (
-                        <p style={styles.hint}>
-                            ℹ️ L'année 1 n'a pas de filière spécifique
-                        </p>
+                        <ChevronDown className={`absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none ${isYearOne ? 'text-slate-300' : 'text-slate-400'}`} size={18} />
+                    </div>
+
+                    {/* Hint pour Année 1 */}
+                    {isYearOne && (
+                        <div className="flex items-start gap-2 mt-2 text-xs text-cyan-600 bg-cyan-50 p-2 rounded-lg border border-cyan-100 animate-in fade-in slide-in-from-top-1">
+                            <Info size={14} className="mt-0.5 shrink-0" />
+                            <span>L'année 1 est un tronc commun, elle ne nécessite pas de sélection de filière.</span>
+                        </div>
                     )}
                 </div>
             </div>
 
+            {/* --- Affichage de la CLÉ GÉNÉRÉE --- */}
             {generatedKey && (
-                <div style={styles.keyDisplay}>
-                    <span style={styles.keyLabel}>Clé générée :</span>
-                    <code style={styles.keyCode}>{generatedKey}</code>
+                <div className="mt-6 pt-6 border-t border-slate-100 flex flex-col sm:flex-row items-start sm:items-center justify-between">
+                    <div className="flex items-center gap-2 text-slate-500 text-sm">
+                        <Key size={16} />
+                        <span>Identifiant unique du programme :</span>
+                    </div>
+                    
+                    <div className="group relative overflow-hidden rounded-lg px-4 py-2 bg-nws-purple">
+                        <code className="relative font-mono text-base font-bold text-white tracking-wider">
+                            {generatedKey}
+                        </code>
+                    </div>
                 </div>
             )}
         </div>
     );
 }
-
-const styles = {
-    container: {
-        marginBottom: '1rem',
-    },
-    row: {
-        display: 'flex',
-        gap: '1rem',
-        marginBottom: '0.5rem',
-    },
-    field: {
-        flex: 1,
-    },
-    label: {
-        display: 'block',
-        fontSize: '0.85rem',
-        fontWeight: 500,
-        color: '#374151',
-        marginBottom: '0.4rem',
-    },
-    select: {
-        width: '100%',
-        padding: '0.6rem',
-        marginTop: '0.3rem',
-        borderRadius: '0.5rem',
-        border: '1px solid #d1d5db',
-        fontSize: '0.9rem',
-        background: 'white',
-        cursor: 'pointer',
-        transition: 'border-color 0.2s',
-    },
-    selectDisabled: {
-        background: '#f3f4f6',
-        color: '#9ca3af',
-        cursor: 'not-allowed',
-    },
-    hint: {
-        margin: '0.5rem 0 0 0',
-        fontSize: '0.75rem',
-        color: '#0284c7',
-        fontStyle: 'italic',
-    },
-    keyDisplay: {
-        padding: '0.8rem 1rem',
-        background: '#e0f2fe',
-        border: '1px solid #7dd3fc',
-        borderRadius: '0.5rem',
-        marginTop: '0.5rem',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '0.8rem',
-    },
-    keyLabel: {
-        fontSize: '0.85rem',
-        fontWeight: 500,
-        color: '#0369a1',
-    },
-    keyCode: {
-        padding: '0.3rem 0.6rem',
-        background: '#0284c7',
-        color: 'white',
-        borderRadius: '0.3rem',
-        fontSize: '0.9rem',
-        fontWeight: 600,
-    },
-};
 
 export default ProgramKeySelector;

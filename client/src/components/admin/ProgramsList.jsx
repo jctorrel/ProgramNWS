@@ -1,8 +1,17 @@
 // src/components/admin/ProgramsList.jsx
+import React from 'react';
+import { 
+    Plus, 
+    Trash2, 
+    BookOpen, 
+    Layers, 
+    Search 
+} from 'lucide-react';
 
 function ProgramsList({ programs, selectedKey, onSelect, onCreate, onDelete }) {
+    
+    // Logique de tri conservée
     const sortedPrograms = [...programs].sort((a, b) => {
-        // Extraire l'année de la clé (A1, A2DW, etc.)
         const getYear = (key) => {
             const match = key?.match(/^A(\d)/);
             return match ? parseInt(match[1]) : 999;
@@ -12,43 +21,54 @@ function ProgramsList({ programs, selectedKey, onSelect, onCreate, onDelete }) {
         const yearB = getYear(b.key);
         
         if (yearA !== yearB) return yearA - yearB;
-        
-        // Si même année, trier par filière
         return (a.key || '').localeCompare(b.key || '');
     });
 
     return (
-        <div style={styles.sidebar}>
-            <div style={styles.header}>
-                <h3 style={styles.title}>Programmes</h3>
-                <span style={styles.count}>{programs.length}</span>
+        <div className="w-full md:w-72 flex flex-col gap-4 h-[calc(100vh-8rem)]">
+            
+            {/* --- HEADER SIDEBAR --- */}
+            <div className="flex items-center justify-between px-1">
+                <h3 className="font-bold text-slate-800 flex items-center gap-2">
+                    <BookOpen size={20} className="text-nws-purple" />
+                    Programmes
+                </h3>
+                <span className="bg-slate-100 text-slate-600 text-xs font-bold px-2 py-1 rounded-full">
+                    {programs.length}
+                </span>
             </div>
 
-            <button style={styles.createButton} onClick={onCreate}>
-                + Nouveau programme
+            {/* --- BOUTON CRÉATION --- */}
+            <button 
+                onClick={onCreate}
+                className="w-full flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white p-2.5 rounded-lg font-medium transition-colors shadow-sm active:scale-95"
+            >
+                <Plus size={18} />
+                Nouveau programme
             </button>
 
-            {programs.length === 0 ? (
-                <div style={styles.emptyState}>
-                    <p style={styles.emptyIcon}>📚</p>
-                    <p style={styles.emptyText}>Aucun programme</p>
-                    <p style={styles.emptyHint}>
-                        Crée ton premier programme pour commencer
-                    </p>
-                </div>
-            ) : (
-                <ul style={styles.list}>
-                    {sortedPrograms.map((program) => (
-                        <ProgramItem
-                            key={program.key}
-                            program={program}
-                            isActive={program.key === selectedKey}
-                            onClick={() => onSelect(program.key)}
-                            onDelete={() => onDelete(program.key)}
-                        />
-                    ))}
-                </ul>
-            )}
+            {/* --- LISTE DÉFILANTE --- */}
+            <div className="flex-1 overflow-y-auto pr-1 space-y-2">
+                {programs.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center text-center h-48 text-slate-400 border-2 border-dashed border-slate-200 rounded-xl p-4">
+                        <Layers size={40} className="mb-3 text-slate-300" />
+                        <p className="font-medium text-slate-600 mb-1">Aucun programme</p>
+                        <p className="text-xs">Crée le premier pour commencer l'édition</p>
+                    </div>
+                ) : (
+                    <ul className="space-y-2">
+                        {sortedPrograms.map((program) => (
+                            <ProgramItem
+                                key={program.key}
+                                program={program}
+                                isActive={program.key === selectedKey}
+                                onClick={() => onSelect(program.key)}
+                                onDelete={() => onDelete(program.key)}
+                            />
+                        ))}
+                    </ul>
+                )}
+            </div>
         </div>
     );
 }
@@ -61,173 +81,57 @@ function ProgramItem({ program, isActive, onClick, onDelete }) {
         }
     };
 
-    const itemStyle = {
-        ...styles.item,
-        ...(isActive ? styles.activeItem : {}),
-    };
-
     return (
-        <li style={itemStyle}>
-            <div style={styles.itemContent} onClick={onClick}>
-                <div style={styles.itemHeader}>
-                    <span style={styles.programKey}>{program.key}</span>
+        <li 
+            onClick={onClick}
+            className={`
+                group relative flex items-start justify-between p-3 rounded-xl cursor-pointer transition-all border
+                ${isActive 
+                    ? "bg-purple-50 border-purple-200 shadow-sm ring-1 ring-purple-100" 
+                    : "bg-white border-transparent hover:border-slate-200 hover:bg-slate-50"
+                }
+            `}
+        >
+            <div className="flex flex-col gap-1 overflow-hidden">
+                <div className="flex items-center gap-2">
+                    {/* Badge Clé (ex: A1, A2DW) */}
+                    <span className={`
+                        text-xs font-bold px-1.5 py-0.5 rounded
+                        ${isActive ? 'bg-white text-nws-purple' : 'bg-slate-100 text-slate-600'}
+                    `}>
+                        {program.key}
+                    </span>
+
+                    {/* Badge Module Count */}
                     {program.modules && program.modules.length > 0 && (
-                        <span style={styles.moduleCount}>
-                            {program.modules.length} module{program.modules.length > 1 ? 's' : ''}
+                        <span className="text-[10px] text-slate-400 font-medium flex items-center gap-0.5">
+                            <Layers size={10} />
+                            {program.modules.length}
                         </span>
                     )}
                 </div>
-                <span style={styles.programLabel}>
-                    {program.label || "(sans nom)"}
+
+                <span className={`text-sm font-medium truncate leading-tight ${isActive ? 'text-purple-900' : 'text-slate-700'}`}>
+                    {program.label || <span className="italic opacity-50">(Sans nom)</span>}
                 </span>
             </div>
             
-            {isActive && (
-                <button
-                    style={styles.deleteButton}
-                    onClick={handleDelete}
-                    title="Supprimer ce programme"
-                >
-                    🗑️
-                </button>
-            )}
+            {/* Bouton Supprimer (Visible si actif ou au hover) */}
+            <button
+                onClick={handleDelete}
+                className={`
+                    p-1.5 rounded-lg transition-all
+                    ${isActive 
+                        ? "text-purple-300 hover:text-red-500 hover:bg-white" 
+                        : "text-slate-300 opacity-0 group-hover:opacity-100 hover:text-red-500 hover:bg-red-50"
+                    }
+                `}
+                title="Supprimer ce programme"
+            >
+                <Trash2 size={16} />
+            </button>
         </li>
     );
 }
-
-const styles = {
-    sidebar: {
-        width: "280px",
-        background: "#f9fafb",
-        border: "1px solid #e5e7eb",
-        borderRadius: "0.8rem",
-        padding: "1rem",
-        display: "flex",
-        flexDirection: "column",
-        gap: "0.75rem",
-        maxHeight: "calc(100vh - 12rem)",
-        overflowY: "auto",
-    },
-    header: {
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center",
-        marginBottom: "0.5rem",
-    },
-    title: {
-        margin: 0,
-        fontSize: "1.1rem",
-        fontWeight: 600,
-        color: "#1e293b",
-    },
-    count: {
-        padding: "0.2rem 0.5rem",
-        background: "#e0f2fe",
-        color: "#0369a1",
-        borderRadius: "0.4rem",
-        fontSize: "0.75rem",
-        fontWeight: 600,
-    },
-    createButton: {
-        width: "100%",
-        padding: "0.6rem",
-        background: "#10b981",
-        border: "none",
-        borderRadius: "0.5rem",
-        color: "white",
-        cursor: "pointer",
-        fontWeight: 500,
-        fontSize: "0.9rem",
-        transition: "background-color 0.2s",
-    },
-    list: {
-        listStyle: "none",
-        margin: 0,
-        padding: 0,
-        display: "flex",
-        flexDirection: "column",
-        gap: "0.4rem",
-    },
-    item: {
-        padding: "0.75rem",
-        borderRadius: "0.5rem",
-        cursor: "pointer",
-        fontSize: "0.9rem",
-        transition: "all 0.15s",
-        border: "1px solid transparent",
-        background: "white",
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center",
-        gap: "0.5rem",
-    },
-    activeItem: {
-        background: "#e0f2fe",
-        fontWeight: 500,
-        border: "1px solid #0ea5e9",
-        boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
-    },
-    itemContent: {
-        display: "flex",
-        flexDirection: "column",
-        gap: "0.3rem",
-        flex: 1,
-    },
-    itemHeader: {
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center",
-        gap: "0.5rem",
-    },
-    programKey: {
-        fontSize: "0.8rem",
-        fontWeight: 700,
-        color: "#0ea5e9",
-        textTransform: "uppercase",
-        letterSpacing: "0.5px",
-    },
-    moduleCount: {
-        fontSize: "0.7rem",
-        color: "#6b7280",
-        background: "#f3f4f6",
-        padding: "0.15rem 0.4rem",
-        borderRadius: "0.3rem",
-    },
-    programLabel: {
-        fontSize: "0.85rem",
-        color: "#1e293b",
-        lineHeight: "1.3",
-    },
-    deleteButton: {
-        background: "transparent",
-        border: "none",
-        cursor: "pointer",
-        fontSize: "1rem",
-        padding: "0.3rem",
-        borderRadius: "0.3rem",
-        transition: "all 0.2s",
-        opacity: 0.6,
-    },
-    emptyState: {
-        textAlign: "center",
-        padding: "2rem 1rem",
-    },
-    emptyIcon: {
-        fontSize: "3rem",
-        margin: "0 0 0.5rem 0",
-    },
-    emptyText: {
-        margin: "0 0 0.5rem 0",
-        fontSize: "0.9rem",
-        color: "#6b7280",
-        fontWeight: 500,
-    },
-    emptyHint: {
-        margin: 0,
-        fontSize: "0.8rem",
-        color: "#9ca3af",
-        fontStyle: "italic",
-    },
-};
 
 export default ProgramsList;

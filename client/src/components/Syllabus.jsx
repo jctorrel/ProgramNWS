@@ -1,33 +1,47 @@
 // src/components/public/Syllabus.jsx
-
 import { useState } from 'react';
+import {
+    Code2,
+    Database,
+    Palette,
+    Globe,
+    Layout,
+    Server,
+    Smartphone,
+    ShieldCheck,
+    Terminal,
+    CheckCircle2,
+    Box,
+    Calendar,
+    BookOpen,
+    Layers
+} from 'lucide-react';
 
 // ============================================
-// CONFIGURATION
+// CONFIGURATION & CONSTANTES
 // ============================================
 
-const COLORS_HEX = ['#ffc72c', '#00c7b1', '#ff4b4b', '#6c3df4'];
+const COLORS = ['#ffc72c', '#00c7b1', '#ff4b4b', '#6c3df4'];
 const MONTH_NAMES = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc'];
 
-// ============================================
-// FONCTIONS UTILS
-// ============================================
-
+// Mapping des icônes selon le titre du module
 const getModuleIcon = (label) => {
     const lower = label.toLowerCase();
-    if (lower.includes('wordpress') || lower.includes('cms')) return '🌐';
-    if (lower.includes('react') || lower.includes('vue')) return '⚛️';
-    if (lower.includes('node') || lower.includes('backend')) return '🔧';
-    if (lower.includes('database') || lower.includes('sql')) return '🗄️';
-    if (lower.includes('design') || lower.includes('ui')) return '🎨';
-    if (lower.includes('seo') || lower.includes('marketing')) return '📈';
-    if (lower.includes('git')) return '🔀';
-    if (lower.includes('test')) return '🧪';
-    if (lower.includes('security')) return '🔒';
-    if (lower.includes('deploy')) return '🚀';
-    if (lower.includes('mobile')) return '📱';
-    return '📘';
+    if (lower.includes('wordpress') || lower.includes('cms')) return Globe;
+    if (lower.includes('react') || lower.includes('vue') || lower.includes('front')) return Code2;
+    if (lower.includes('node') || lower.includes('backend')) return Server;
+    if (lower.includes('database') || lower.includes('sql')) return Database;
+    if (lower.includes('design') || lower.includes('ui')) return Palette;
+    if (lower.includes('seo') || lower.includes('marketing')) return Layout;
+    if (lower.includes('git') || lower.includes('terminal')) return Terminal;
+    if (lower.includes('mobile')) return Smartphone;
+    if (lower.includes('security')) return ShieldCheck;
+    return BookOpen;
 };
+
+// ============================================
+// HELPERS
+// ============================================
 
 const formatDate = (dateStr) => {
     const date = new Date(dateStr);
@@ -41,6 +55,7 @@ const formatPeriod = (startMonth, endMonth) => {
 const getDeliverablePosition = (date) => {
     const delivDate = new Date(date);
     const month = delivDate.getMonth() + 1;
+    // Année scolaire : Sept(9) -> Juin(6)
     return month >= 9 ? ((month - 9) / 10) * 100 : ((month + 3) / 10) * 100;
 };
 
@@ -52,197 +67,116 @@ const getTimelineMonths = () => {
 };
 
 const getLastActiveMonth = (modules) => {
-    if (!modules || modules.length === 0) return 7; // Par défaut 70% (7 sur 10 mois)
-    
+    if (!modules || modules.length === 0) return 7;
     let maxPosition = 0;
-    
     modules.forEach(module => {
         const endMonth = module.end_month;
-        
-        // Convertir le mois en position dans l'année scolaire
-        // Sept=1, Oct=2, Nov=3, Déc=4, Jan=5, Fév=6, Mar=7, Avr=8, Mai=9, Juin=10
-        const position = endMonth >= 9 
-            ? endMonth - 8    // Sept(9)→1, Oct(10)→2, Nov(11)→3, Déc(12)→4
-            : endMonth + 4;   // Jan(1)→5, Fév(2)→6, Mar(3)→7, Avr(4)→8, Mai(5)→9, Juin(6)→10
-        
+        const position = endMonth >= 9 ? endMonth - 8 : endMonth + 4;
         maxPosition = Math.max(maxPosition, position);
     });
-    
     return maxPosition;
 };
 
 // ============================================
-// STYLES INLINE (pour les détails graphiques)
-// ============================================
-
-const inlineStyles = {
-    container: {
-        maxWidth: '1900px',
-        margin: '0 auto',
-        padding: '1rem 0.75rem',
-        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-    },
-    header: {
-        textAlign: 'center',
-    },
-    title: {
-        fontSize: '3rem',
-        fontWeight: 700,
-        color: '#1e293b',
-    },
-    programKey: {
-        display: 'inline-block',
-        padding: '0.5rem 1.5rem',
-        background: '#6c3df4',
-        color: 'white',
-        borderRadius: '2rem',
-        fontSize: '0.9rem',
-        fontWeight: 600,
-        marginBottom: '1.5rem',
-    },
-    description: {
-        fontSize: '1.2rem',
-        color: '#64748b',
-        maxWidth: '800px',
-        margin: '0 auto',
-        lineHeight: '1',
-    },
-};
-
-// ============================================
-// COMPOSANTS RÉUTILISABLES
+// SOUS-COMPOSANTS
 // ============================================
 
 const Header = ({ program }) => (
-    <div style={inlineStyles.header}>
-        <h1 style={inlineStyles.title}>📚 {program.label}</h1>
-        <div style={inlineStyles.programKey}>{program.key}</div>
+    <div className="text-center mb-5">
+        <div className="inline-flex items-center justify-center p-3 bg-indigo-50 text-nws-purple rounded-2xl mb-4 shadow-sm border border-indigo-100">
+            <BookOpen size={32} />
+        </div>
+        <h1 className="text-4xl md:text-5xl font-extrabold text-slate-900 mb-4 tracking-tight">
+            {program.label}
+        </h1>
+        <div className="inline-block px-4 py-1.5 bg-nws-purple text-white rounded-full font-mono font-bold text-sm shadow-md shadow-purple-200 mb-6">
+            {program.key}
+        </div>
         {program.description && (
-            <p style={inlineStyles.description}>{program.description}</p>
+            <p className="text-lg text-slate-500 max-w-2xl mx-auto leading-relaxed">
+                {program.description}
+            </p>
         )}
     </div>
 );
 
-const TimelineMonths = ({ months, modules }) => {
-    const lastActiveMonth = getLastActiveMonth(modules);
-
-    return (
-    <div style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        marginBottom: '1rem',
-        paddingBottom: '0.5rem',
-    }}>
-        {months.map((month, idx) => (
-            <div
-                key={idx}
-                className={`
-                    flex-1 text-center text-sm font-semibold relative
-                    ${idx < lastActiveMonth ? 'text-[#6c3df4]' : 'text-[#cbd5e1]'}
-                    
-                    after:content-[''] 
-                    after:absolute 
-                    after:-translate-x-1/2
-                    after:w-1 
-                    after:h-3 
-                    after:left-1/2 
-                    after:-bottom-5
-                    ${idx < lastActiveMonth ? 'after:bg-[#6c3df4]' : 'after:bg-[#cbd5e1]'}
-                `}
-            >
-                {month.name}
+const Stats = ({ totalModules, totalDeliverables }) => (
+    <div className="flex flex-wrap justify-center gap-8 md:gap-16 pb-12 mb-12 border-b border-slate-200">
+        {[
+            { value: totalModules, label: 'Modules', icon: Layers },
+            { value: totalDeliverables, label: 'Livrables', icon: Box },
+            { value: 10, label: 'Mois', icon: Calendar }
+        ].map((stat, i) => (
+            <div key={i} className="flex flex-col items-center group">
+                <div className="text-4xl font-bold text-slate-900 mb-1 group-hover:text-nws-purple transition-colors">
+                    {stat.value}
+                </div>
+                <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-400">
+                    <stat.icon size={14} />
+                    {stat.label}
+                </div>
             </div>
         ))}
     </div>
-)};
+);
+
+const TimelineMonths = ({ months, lastActiveMonth }) => (
+    <div className="flex justify-between mb-4 px-2">
+        <div className="absolute top-5 left-0 w-full h-2 bg-slate-100 rounded-full" />
+        {months.map((month, idx) => {
+            const isActive = idx < lastActiveMonth;
+            return (
+                <div key={idx} className="flex flex-col items-center flex-1 relative group">
+                    <span className={`text-sm font-bold mb-3 transition-colors duration-300 ${isActive ? 'text-nws-purple' : 'text-slate-300'}`}>
+                        {month.name}
+                    </span>
+                    {/* Tick mark */}
+                    <div className={`w-0.5 h-2 rounded-full transition-colors duration-300 ${isActive ? 'bg-nws-purple' : 'bg-slate-200'}`} />
+                </div>
+            );
+        })}
+    </div>
+);
 
 const ModuleProgressBars = ({ modules, hoveredModule, setHoveredModule }) => {
-    if (!modules || modules.length === 0) return null;
+    if (!modules?.length) return null;
 
     return (
-        <div style={{
-            position: 'relative',
-            height: '80px',
-            marginBottom: '2rem',
-        }}>
-            {/* Barre de fond grise */}
-            <div style={{
-                position: 'absolute',
-                top: '0',
-                left: '0',
-                width: '100%',
-                height: '8px',
-                background: '#e5e7eb',
-                borderRadius: '4px',
-            }} />
-            
+        <div className="relative h-24 mb-8 select-none">
+            {/* Background Track */}
+
+
             {modules.map((module, index) => {
-                const colors = ['#ffc72c', '#00c7b1', '#ff4b4b', '#6c3df4'];
-                const color = colors[index % colors.length];
+                const color = COLORS[index % COLORS.length];
                 const isHovered = hoveredModule === module.id;
-                
-                const startPos = module.start_month >= 9 
-                    ? module.start_month - 8 
-                    : module.start_month + 4;
-                const endPos = module.end_month >= 9 
-                    ? module.end_month - 8 
-                    : module.end_month + 4;
-                
+
+                const startPos = module.start_month >= 9 ? module.start_month - 8 : module.start_month + 4;
+                const endPos = module.end_month >= 9 ? module.end_month - 8 : module.end_month + 4;
+
                 const left = ((startPos - 1) / 10) * 100;
                 const width = ((endPos - startPos + 1) / 10) * 100;
-                
+
                 return (
                     <div
                         key={module.id || index}
+                        className={`absolute rounded-lg transition-all duration-300 cursor-pointer shadow-sm
+                            ${isHovered ? 'h-2.5 shadow-lg z-20' : 'h-1.5 z-10 hover:opacity-90'}
+                        `}
                         style={{
-                            position: 'absolute',
-                            top: `${index * 16}px`,
+                            top: `${index * 10}px`,
                             left: `${left}%`,
                             width: `${width}%`,
-                            height: isHovered ? '14px' : '10px', // 👈 Grossit au hover
-                            background: color,
-                            borderRadius: '4px',
-                            boxShadow: isHovered 
-                                ? `0 4px 15px ${color}80` // 👈 Ombre plus forte
-                                : `0 2px 8px ${color}60`,
-                            zIndex: isHovered ? 20 : 10, // 👈 Passe au premier plan
-                            cursor: 'pointer',
-                            transition: 'all 0.3s ease',
-                            animation: `slideInBar 1s ease-out ${index * 0.15}s backwards`,
+                            backgroundColor: color,
+                            transform: isHovered ? 'scaleY(1.1)' : 'scaleY(1)',
                         }}
-                        onMouseEnter={() => setHoveredModule(module.id)} // 👈 Hover
+                        onMouseEnter={() => setHoveredModule(module.id)}
                         onMouseLeave={() => setHoveredModule(null)}
                     >
-                        {/* Tooltip au hover */}
+                        {/* Tooltip on Hover */}
                         {isHovered && (
-                            <div style={{
-                                position: 'absolute',
-                                bottom: '120%',
-                                left: '50%',
-                                transform: 'translateX(-50%)',
-                                background: '#1e293b',
-                                color: 'white',
-                                padding: '0.5rem 1rem',
-                                borderRadius: '0.5rem',
-                                fontSize: '0.85rem',
-                                whiteSpace: 'nowrap',
-                                boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
-                                zIndex: 1000,
-                                pointerEvents: 'none',
-                                animation: 'fadeIn 0.2s ease',
-                            }}>
-                                📚 {module.label}
-                                <div style={{
-                                    position: 'absolute',
-                                    bottom: '-4px',
-                                    left: '50%',
-                                    transform: 'translateX(-50%)',
-                                    width: 0,
-                                    height: 0,
-                                    borderLeft: '6px solid transparent',
-                                    borderRight: '6px solid transparent',
-                                    borderTop: '6px solid #1e293b',
-                                }} />
+                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-slate-800 text-white text-xs font-semibold rounded shadow-xl whitespace-nowrap animate-in fade-in zoom-in-95 duration-200 z-50">
+                                {module.label}
+                                <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-800" />
                             </div>
                         )}
                     </div>
@@ -252,322 +186,179 @@ const ModuleProgressBars = ({ modules, hoveredModule, setHoveredModule }) => {
     );
 };
 
-const DeliverableTooltip = ({ deliv }) => (
-    <div style={{
-        position: 'absolute',
-        bottom: '100%',
-        left: '50%',
-        transform: 'translateX(-50%)',
-        marginBottom: '50px',
-        background: 'white',
-        padding: '0.75rem 1rem',
-        borderRadius: '0.5rem',
-        boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
-        minWidth: '200px',
-        pointerEvents: 'none',
-        zIndex: 1000,
-    }}>
-        <div style={{
-            fontSize: '0.75rem',
-            fontWeight: 700,
-            color: '#6c3df4',
-            marginBottom: '0.25rem',
-            textTransform: 'uppercase',
-            letterSpacing: '0.05em',
-        }}>
-            {deliv.moduleLabel}
-        </div>
-        <div style={{
-            fontSize: '0.9rem',
-            fontWeight: 600,
-            color: '#1e293b',
-            marginBottom: '0.25rem',
-        }}>
-            {deliv.descriptif}
-        </div>
-        <div style={{ fontSize: '0.8rem', color: '#64748b' }}>
-            {formatDate(deliv.date)}
-        </div>
-    </div>
-);
+const DeliverableMarker = ({ deliv, isHovered, onHover, onLeave }) => {
+    // Logique pour éviter que l'infobulle ne sorte de l'écran (Scrollbar horizontale)
+    let tooltipPositionClass = "-translate-x-1/2 left-1/2"; // Défaut : centré
+    let tooltipArrowClass = "left-1/2 -translate-x-1/2";
 
-const DeliverableMarker = ({ deliv, isHovered, onHover, onLeave }) => (
-    <div
-        style={{
-            position: 'absolute',
-            top: '50%',
-            left: `${deliv.position}%`,
-        }}
-        onMouseEnter={onHover}
-        onMouseLeave={onLeave}
-    >
+    if (deliv.position < 10) {
+        tooltipPositionClass = "left-0 translate-x-0"; // Aligné gauche
+        tooltipArrowClass = "left-4";
+    } else if (deliv.position > 90) {
+        tooltipPositionClass = "right-0 translate-x-0 left-auto"; // Aligné droite
+        tooltipArrowClass = "right-4 left-auto";
+    }
+
+    return (
         <div
-            style={{
-                position: 'absolute',
-                top: '50%',
-                width: '18px',
-                height: '18px',
-                borderRadius: '50%',
-                background: deliv.color,
-                border: '3px solid white',
-                transform: isHovered ? 'translateX(-50%) scale(1.3)' : 'translateX(-50%) scale(1)',
-                transition: 'all 0.2s ease',
-                boxShadow: isHovered ? `0 4px 12px ${deliv.color}80` : '0 2px 8px rgba(0,0,0,0.15)',
-                cursor: 'pointer',
-                zIndex: isHovered ? 100 : 10,
-            }}
+            className="absolute top-0 group z-30" // Retrait du top-1/2 pour un contrôle précis
+            style={{ left: `${deliv.position}%` }}
+            onMouseEnter={onHover}
+            onMouseLeave={onLeave}
         >
-            {/* Ligne de connexion */}
-            <div style={{
-                position: 'absolute',
-                bottom: '100%',
-                left: '50%',
-                transform: 'translateX(-50%)',
-                width: '2px',
-                height: '40px',
-                background: deliv.color,
-                opacity: isHovered ? 0.4 : 0.2,
-                transition: 'opacity 0.2s ease',
-            }} />
+            {/* Ligne de connexion (Ajustée pour remonter vers la barre) */}
+            <div
+                className={`absolute bottom-full left-1/2 -translate-x-1/2 w-0.5 bg-current transition-all duration-300 origin-bottom
+                    ${isHovered ? 'h-8 opacity-100' : 'h-4 opacity-40 group-hover:h-6'}
+                `}
+                style={{ color: deliv.color, marginBottom: '2px' }}
+            />
 
-            {isHovered && <DeliverableTooltip deliv={deliv} />}
+            {/* Point (Dot) */}
+            <div
+                className={`relative w-3.5 h-3.5 -mt-2 rounded-full border-[3px] border-white shadow-md transition-all duration-300 cursor-pointer
+                    ${isHovered ? 'scale-150 ring-2 ring-offset-2 ring-indigo-100' : 'scale-100 group-hover:scale-110'}
+                `}
+                style={{ backgroundColor: deliv.color }}
+            >
+                {/* Tooltip Livrable */}
+                {isHovered && (
+                    <div
+                        className={`absolute bottom-[200%] ${tooltipPositionClass} w-64 p-4 bg-white rounded-xl shadow-[0_10px_40px_-10px_rgba(0,0,0,0.2)] border border-slate-100 z-[100] animate-in slide-in-from-bottom-2 duration-200`}
+                    >
+                        <div className="text-[10px] font-bold uppercase tracking-wider mb-1" style={{ color: deliv.color }}>
+                            {deliv.moduleLabel}
+                        </div>
+                        <div className="text-sm font-bold text-slate-800 leading-tight mb-1">
+                            {deliv.descriptif}
+                        </div>
+                        <div className="text-xs text-slate-500 font-medium bg-slate-50 inline-block px-2 py-0.5 rounded mt-1">
+                            {formatDate(deliv.date)}
+                        </div>
+
+                        {/* Flèche du tooltip */}
+                        <div className={`absolute -bottom-1.5 w-3 h-3 bg-white border-b border-r border-slate-100 transform rotate-45 ${tooltipArrowClass}`} />
+                    </div>
+                )}
+            </div>
         </div>
-    </div>
-);
+    );
+};
 
 const Timeline = ({ deliverables, modules, hoveredDeliverable, hoveredModule, setHoveredDeliverable, setHoveredModule }) => {
     const months = getTimelineMonths();
+    const lastActiveMonth = getLastActiveMonth(modules);
 
     return (
-        <div style={{
-            position: 'relative',
-            padding: '2rem 0',
-            overflowX: 'auto',
-            overflowY: 'visible',
-        }}>
-            <TimelineMonths months={months} />
+        <div className="bg-white rounded-[2.5rem] border border-slate-200 p-8 shadow-xl shadow-slate-200/50 mb-16 overflow-hidden">
+            {/* Titre décoratif */}
+            <div className="text-center mb-8">
+                <h3 className="text-sm font-bold text-slate-400 uppercase tracking-widest">Chronologie du programme</h3>
+            </div>
 
-            <ModuleProgressBars 
-                modules={modules}
-                hoveredModule={hoveredModule}
-                setHoveredModule={setHoveredModule}
-            />
-            
-            {/* Marqueurs de livrables */}
-            <div style={{ position: 'relative', marginTop: '1rem' }}>
-                {deliverables.map((deliv, idx) => (
-                    <DeliverableMarker
-                        key={idx}
-                        deliv={deliv}
-                        isHovered={hoveredDeliverable === idx}
-                        onHover={() => {
-                            setHoveredDeliverable(idx);
-                            setHoveredModule(deliv.moduleId);
-                        }}
-                        onLeave={() => {
-                            setHoveredDeliverable(null);
-                            setHoveredModule(null);
-                        }}
+            <div className="overflow-x-auto overflow-y-hidden pb-2 px-2">
+                <div className="min-w-[800px] relative">
+                    <TimelineMonths months={months} lastActiveMonth={lastActiveMonth} />
+
+                    {/* Zone des marqueurs */}
+                    <div className="relative h-2">
+                        {deliverables.map((deliv, idx) => (
+                            <DeliverableMarker
+                                key={idx}
+                                deliv={deliv}
+                                isHovered={hoveredDeliverable === idx}
+                                onHover={() => {
+                                    setHoveredDeliverable(idx);
+                                    setHoveredModule(deliv.moduleId);
+                                }}
+                                onLeave={() => {
+                                    setHoveredDeliverable(null);
+                                    setHoveredModule(null);
+                                }}
+                            />
+                        ))}
+                    </div>
+
+                    <ModuleProgressBars
+                        modules={modules}
+                        hoveredModule={hoveredModule}
+                        setHoveredModule={setHoveredModule}
                     />
-                ))}
+                </div>
             </div>
         </div>
     );
 };
 
-const ModuleHeader = ({ index, color, period }) => (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '0.5rem' }}>
-        <div style={{
-            width: '36px',
-            height: '36px',
-            borderRadius: '20%',
-            background: color,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: 'white',
-            fontWeight: 700,
-            fontSize: '1.1rem',
-            flexShrink: 0,
-        }}>
-            {index + 1}
-        </div>
-        <div style={{
-            fontSize: '0.85rem',
-            fontWeight: 700,
-            color: color,
-            letterSpacing: '0.05em',
-            textTransform: 'uppercase',
-        }}>
-            {period}
-        </div>
-    </div>
-);
-
-const ModuleTitle = ({ label }) => (
-    <div style={{
-        fontSize: '1.3rem',
-        fontWeight: 700,
-        color: '#1e293b',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '0.5rem',
-    }}>
-        <span style={{ fontSize: '1.5rem' }}>{getModuleIcon(label)}</span>
-        <span>{label}</span>
-    </div>
-);
-
-const ModuleContent = ({ content }) => {
-    if (!content || content.length === 0) return null;
+const ModuleCard = ({ module, index, color, isHovered, onHover, onLeave }) => {
+    const Icon = getModuleIcon(module.label);
 
     return (
-        <div style={{
-            fontSize: '0.95rem',
-            color: '#475569',
-            lineHeight: '1.6',
-        }}>
-            {content.map((item, i) => (
-                <div key={i} style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                    <span style={{ color: '#cbd5e1', fontWeight: 700 }}>•</span>
-                    <span>{item}</span>
+        <div
+            className={`bg-white rounded-2xl p-6 md:p-8 border border-slate-100 transition-all duration-300 group
+                ${isHovered ? 'shadow-2xl -translate-y-2 ring-1 ring-slate-200' : 'shadow-sm hover:shadow-lg hover:-translate-y-1'}
+            `}
+            style={{ borderTop: `4px solid ${color}` }}
+            onMouseEnter={onHover}
+            onMouseLeave={onLeave}
+        >
+            {/* En-tête Card */}
+            <div className="flex items-center gap-4 mb-6">
+                <div
+                    className="w-12 h-12 rounded-xl flex items-center justify-center text-white font-bold text-lg shadow-md"
+                    style={{ backgroundColor: color }}
+                >
+                    {index + 1}
                 </div>
-            ))}
+                <div>
+                    <div className="text-xs font-bold uppercase tracking-wider mb-0.5" style={{ color }}>
+                        {formatPeriod(module.start_month, module.end_month)}
+                    </div>
+                    <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+                        <Icon className="w-5 h-5 opacity-70" />
+                        {module.label}
+                    </h3>
+                </div>
+            </div>
+
+            {/* Contenu */}
+            {module.content && module.content.length > 0 && (
+                <div className="space-y-2 mb-8">
+                    {module.content.map((item, i) => (
+                        <div key={i} className="flex items-start gap-2.5 text-slate-600 text-sm leading-relaxed">
+                            <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-slate-300 shrink-0" />
+                            <span>{item}</span>
+                        </div>
+                    ))}
+                </div>
+            )}
+
+            {/* Livrables Section */}
+            {module.deliverables && module.deliverables.length > 0 && (
+                <div className="mt-auto pt-6 border-t border-slate-50">
+                    <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 flex items-center gap-2">
+                        <Box size={14} /> Livrables attendus
+                    </h4>
+                    <div className="space-y-3">
+                        {module.deliverables.map((deliv, i) => (
+                            <div key={i} className="flex items-center justify-between p-3 rounded-lg bg-slate-50 border border-slate-100 group-hover:bg-slate-50/80 transition-colors">
+                                <div className="flex items-center gap-3">
+                                    <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                                    <span className="text-sm font-medium text-slate-700">{deliv.descriptif}</span>
+                                </div>
+                                {deliv.date && (
+                                    <span className="text-xs font-bold px-2 py-1 rounded bg-white text-slate-500 border border-slate-100 whitespace-nowrap ml-2">
+                                        {formatDate(deliv.date)}
+                                    </span>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
-
-const DeliverableItem = ({ deliv, color }) => (
-    <div style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: '0.75rem',
-        padding: '0.5rem',
-        background: '#f8fafc',
-        borderRadius: '0.5rem',
-        transition: 'background 0.2s ease',
-    }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1 }}>
-            <span style={{ color: '#10b981', fontWeight: 700, fontSize: '1rem' }}>✓</span>
-            <span style={{ fontSize: '0.9rem', color: '#475569', fontWeight: 500 }}>
-                {deliv.descriptif}
-            </span>
-        </div>
-        {deliv.date && (
-            <div style={{
-                fontSize: '0.8rem',
-                fontWeight: 700,
-                color: color,
-                whiteSpace: 'nowrap',
-                marginLeft: '0.5rem',
-            }}>
-                {formatDate(deliv.date)}
-            </div>
-        )}
-    </div>
-);
-
-const ModuleDeliverables = ({ deliverables, color }) => {
-    if (!deliverables || deliverables.length === 0) return null;
-
-    return (
-        <div style={{
-            marginTop: '1.5rem',
-            paddingTop: '1.5rem',
-            borderTop: '2px solid #f1f5f9',
-        }}>
-            <div style={{
-                fontSize: '0.9rem',
-                fontWeight: 700,
-                color: '#64748b',
-                marginBottom: '1rem',
-                textTransform: 'uppercase',
-                letterSpacing: '0.05em',
-            }}>
-                📦 Livrables
-            </div>
-            {deliverables.map((deliv, i) => (
-                <DeliverableItem key={i} deliv={deliv} color={color} />
-            ))}
-        </div>
-    );
-};
-
-const ModuleCard = ({ module, index, color, isHovered, onHover, onLeave }) => (
-    <div
-        style={{
-            background: 'white',
-            borderRadius: '1rem',
-            padding: '2rem',
-            borderTop: `4px solid ${color}`,
-            transition: 'all 0.3s ease',
-            transformStyle: 'preserve-3d',
-            transform: isHovered ? 'rotateY(0deg) translateY(-8px)' : 'rotateY(-3deg)',
-            boxShadow: isHovered
-                ? `0 12px 40px ${color}40`
-                : '0 4px 20px rgba(0,0,0,0.1)',
-        }}
-        onMouseEnter={onHover}
-        onMouseLeave={onLeave}
-    >
-        <ModuleHeader
-            index={index}
-            color={color}
-            period={formatPeriod(module.start_month, module.end_month)}
-        />
-        <ModuleTitle label={module.label} />
-        <ModuleContent content={module.content} />
-        <ModuleDeliverables deliverables={module.deliverables} color={color} />
-    </div>
-);
-
-const Stats = ({ totalModules, totalDeliverables }) => (
-    <div style={{
-        display: 'flex',
-        justifyContent: 'center',
-        gap: '4rem',
-        paddingBottom: '4rem',
-        margin: '2rem 10rem 5rem 10rem',
-        borderBottom: '#f1f5f9 solid 3px'
-    }}>
-        {[
-            { value: totalModules, label: 'Modules' },
-            { value: totalDeliverables, label: 'Livrables' },
-            { value: 10, label: 'Mois' }
-        ].map((stat, i) => (
-            <div key={i} style={{ textAlign: 'center' }}>
-                <div style={{
-                    fontSize: '2.5rem',
-                    fontWeight: 700,
-                    color: '#6c3df4',
-                }}>
-                    {stat.value}
-                </div>
-                <div style={{
-                    fontSize: '0.9rem',
-                    color: '#64748b',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.05em',
-                    fontWeight: 600,
-                }}>
-                    {stat.label}
-                </div>
-            </div>
-        ))}
-    </div>
-);
-
-const EmptyState = () => (
-    <div style={{ textAlign: 'center', padding: '4rem 2rem' }}>
-        <h2 style={{ fontSize: '2rem', color: '#1e293b', marginBottom: '1rem' }}>
-            Aucun programme sélectionné
-        </h2>
-        <p style={{ fontSize: '1.1rem', color: '#64748b' }}>
-            Sélectionnez un programme pour voir son syllabus
-        </p>
-    </div>
-);
 
 // ============================================
 // COMPOSANT PRINCIPAL
@@ -579,16 +370,20 @@ function Syllabus({ program }) {
 
     if (!program) {
         return (
-            <div style={inlineStyles.container}>
-                <EmptyState />
+            <div className="min-h-[50vh] flex flex-col items-center justify-center text-center p-8">
+                <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center text-slate-400 mb-4">
+                    <BookOpen size={32} />
+                </div>
+                <h2 className="text-2xl font-bold text-slate-800 mb-2">Aucun programme</h2>
+                <p className="text-slate-500">Sélectionnez un programme pour visualiser son syllabus.</p>
             </div>
         );
     }
 
-    // Collecter tous les livrables avec leurs infos
+    // Préparation des données (Livrables à plat pour la timeline)
     const allDeliverables = [];
     program.modules?.forEach((module, index) => {
-        const color = COLORS_HEX[index % COLORS_HEX.length];
+        const color = COLORS[index % COLORS.length];
         module.deliverables?.forEach(deliv => {
             if (deliv.date) {
                 allDeliverables.push({
@@ -602,39 +397,36 @@ function Syllabus({ program }) {
         });
     });
 
-    // Stats
     const totalModules = program.modules?.length || 0;
-    const totalDeliverables = program.modules?.reduce((sum, mod) =>
-        sum + (mod.deliverables?.length || 0), 0) || 0;
+    const totalDeliverables = program.modules?.reduce((sum, mod) => sum + (mod.deliverables?.length || 0), 0) || 0;
 
     return (
-        <div style={inlineStyles.container}>
-            <Header program={program} />
-            <Stats
-                totalModules={totalModules}
-                totalDeliverables={totalDeliverables}
-            />
+        <div className="min-h-screen bg-slate-50/50">
+            <div className="max-w-[1600px] mx-auto px-4 py-12 md:py-20">
 
-            <div style={{ margin: '1rem', background: '#fafafa', border: '#e5e7eb solid 1px', padding: '2rem', borderRadius: '5rem' }}>
-                <Timeline
-                    deliverables={allDeliverables}
-                    hoveredDeliverable={hoveredDeliverable}
-                    setHoveredDeliverable={setHoveredDeliverable}
-                    setHoveredModule={setHoveredModule}
-                    modules={program.modules}
+                <Header program={program} />
+
+                <Stats
+                    totalModules={totalModules}
+                    totalDeliverables={totalDeliverables}
                 />
 
-                <div style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))',
-                    gap: '2rem',
-                    perspective: '1000px',
-                }}>
+                <Timeline
+                    deliverables={allDeliverables}
+                    modules={program.modules}
+                    hoveredDeliverable={hoveredDeliverable}
+                    hoveredModule={hoveredModule}
+                    setHoveredDeliverable={setHoveredDeliverable}
+                    setHoveredModule={setHoveredModule}
+                />
+
+                {/* Grid Modules */}
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
                     {program.modules?.map((module, index) => {
-                        const color = COLORS_HEX[index % COLORS_HEX.length];
+                        const color = COLORS[index % COLORS.length];
                         return (
                             <ModuleCard
-                                key={module.id}
+                                key={module.id || index}
                                 module={module}
                                 index={index}
                                 color={color}
@@ -645,33 +437,10 @@ function Syllabus({ program }) {
                         );
                     })}
                 </div>
+
             </div>
         </div>
     );
-}
-
-// Ajout de l'animation CSS
-const styleSheet = document.createElement('style');
-styleSheet.textContent = `
-    @keyframes progressFill {
-        from { width: 0%; }
-        to { width: var(--progress-width); }
-    }
-    
-    @keyframes slideInBar {
-        from {
-            width: 0%;
-            opacity: 0;
-        }
-        to {
-            width: 100%;
-            opacity: 1;
-        }
-    }
-`;
-if (!document.head.querySelector('style[data-syllabus]')) {
-    styleSheet.setAttribute('data-syllabus', 'true');
-    document.head.appendChild(styleSheet);
 }
 
 export default Syllabus;

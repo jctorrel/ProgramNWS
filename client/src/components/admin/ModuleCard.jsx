@@ -1,5 +1,16 @@
 // src/components/admin/ModuleCard.jsx
-import { useState } from 'react';
+import React, { useState } from 'react';
+import { 
+    GripVertical, 
+    ChevronRight, 
+    ChevronDown,
+    Copy, 
+    Trash2, 
+    Package, 
+    Calendar, 
+    Plus, 
+    X 
+} from 'lucide-react';
 import { MOIS, generateSlug } from '../../utils/constants';
 
 function ModuleCard({ 
@@ -27,6 +38,7 @@ function ModuleCard({
         }
     };
 
+    // --- Gestion des Livrables ---
     const addDeliverable = () => {
         const newDeliverables = [
             ...(module.deliverables || []),
@@ -49,401 +61,221 @@ function ModuleCard({
 
     return (
         <div 
-            style={{
-                ...styles.card,
-                ...(isDragging ? styles.cardDragging : {})
-            }}
             draggable
             onDragStart={() => onDragStart(index)}
             onDragOver={(e) => onDragOver(e, index)}
             onDragEnd={onDragEnd}
+            className={`
+                group relative bg-white rounded-xl border transition-all duration-200
+                ${isDragging 
+                    ? "opacity-40 border-dashed border-nws-purple ring-2 ring-nws-purple/20 shadow-none scale-[0.99]" 
+                    : "border-slate-200 shadow-sm hover:shadow-md hover:border-slate-300"
+                }
+            `}
         >
-            <div style={styles.header}>
-                <span style={styles.dragHandle} title="Glisser pour réordonner">
-                    ⋮⋮
-                </span>
+            {/* --- HEADER (Toujours visible) --- */}
+            <div className="flex items-center gap-3 p-3 pl-2">
+                
+                {/* Drag Handle */}
+                <div 
+                    className="cursor-grab active:cursor-grabbing p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+                    title="Maintenir pour déplacer"
+                >
+                    <GripVertical size={20} />
+                </div>
 
+                {/* Bouton Toggle Accordéon */}
                 <button
                     type="button"
                     onClick={() => setIsExpanded(!isExpanded)}
-                    style={styles.expandButton}
+                    className="p-1.5 text-slate-500 hover:bg-slate-100 rounded-lg transition-colors"
                 >
-                    {isExpanded ? '▼' : '▷'}
+                    <ChevronRight 
+                        size={20} 
+                        className={`transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`} 
+                    />
                 </button>
 
-                <div style={styles.headerInfo}>
-                    <h5 style={styles.title}>
-                        {module.label || `Module ${index + 1}`}
+                {/* Info Principale */}
+                <div 
+                    className="flex-1 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 cursor-pointer"
+                    onClick={() => setIsExpanded(!isExpanded)}
+                >
+                    <h5 className="font-semibold text-slate-800 text-sm sm:text-base">
+                        {module.label || <span className="text-slate-400 italic">Nouveau module</span>}
                     </h5>
-                    <span style={styles.period}>
-                        {getMonthLabel(module.start_month)} → {getMonthLabel(module.end_month)}
-                    </span>
+                    
+                    {/* Badge Période */}
+                    <div className="flex items-center gap-1.5 text-xs font-medium text-slate-500 bg-slate-100 px-2 py-1 rounded-md">
+                        <Calendar size={12} />
+                        <span>
+                            {getMonthLabel(module.start_month)} → {getMonthLabel(module.end_month)}
+                        </span>
+                    </div>
                 </div>
 
-                <div style={styles.actions}>
+                {/* Actions Rapides */}
+                <div className="flex items-center gap-1">
                     <button
                         type="button"
-                        onClick={() => onDuplicate(index)}
-                        style={styles.iconButton}
-                        title="Dupliquer ce module"
+                        onClick={(e) => { e.stopPropagation(); onDuplicate(index); }}
+                        className="p-2 text-slate-400 hover:text-nws-purple hover:bg-purple-50 rounded-lg transition-colors"
+                        title="Dupliquer"
                     >
-                        📋
+                        <Copy size={18} />
                     </button>
                     <button
                         type="button"
-                        onClick={() => onRemove(index)}
-                        style={styles.removeButton}
+                        onClick={(e) => { e.stopPropagation(); onRemove(index); }}
+                        className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                         title="Supprimer"
                     >
-                        ✕
+                        <Trash2 size={18} />
                     </button>
                 </div>
             </div>
 
+            {/* --- CONTENU (Visible si Expanded) --- */}
             {isExpanded && (
-                <div style={styles.content}>
-                    <div style={styles.row}>
-                        <div style={{ ...styles.field, flex: 3 }}>
-                            <label style={styles.label}>
-                                Nom du module *
+                <div className="px-4 pb-4 pt-0 animate-in slide-in-from-top-2 duration-200">
+                    <hr className="border-slate-100 mb-4" />
+                    
+                    <div className="space-y-4">
+                        {/* Ligne 1 : Nom & ID */}
+                        <div className="grid grid-cols-1 sm:grid-cols-12 gap-4">
+                            <div className="sm:col-span-7 space-y-1.5">
+                                <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">
+                                    Nom du module <span className="text-red-500">*</span>
+                                </label>
                                 <input
                                     type="text"
                                     value={module.label}
                                     onChange={(e) => handleLabelChange(e.target.value)}
-                                    style={styles.input}
-                                    placeholder="ex: Wordpress"
+                                    className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:border-nws-purple focus:ring-4 focus:ring-nws-purple/10 outline-none transition-all"
+                                    placeholder="ex: React Avancé"
                                     required
                                 />
-                            </label>
-                        </div>
-
-                        <div style={{ ...styles.field, flex: 2 }}>
-                            <label style={styles.label}>
-                                ID du module *
+                            </div>
+                            <div className="sm:col-span-5 space-y-1.5">
+                                <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">
+                                    ID Unique <span className="text-red-500">*</span>
+                                </label>
                                 <input
                                     type="text"
                                     value={module.id}
                                     onChange={(e) => onChange(index, 'id', e.target.value)}
-                                    style={styles.input}
-                                    placeholder="Auto-généré depuis le nom"
+                                    className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-slate-50 text-slate-600 text-sm font-mono focus:border-nws-purple focus:ring-4 focus:ring-nws-purple/10 outline-none transition-all"
+                                    placeholder="react-avance"
                                     required
                                 />
-                            </label>
-                        </div>
-                    </div>
-
-                    <div style={styles.row}>
-                        <div style={styles.field}>
-                            <label style={styles.label}>
-                                Mois de début *
-                                <select
-                                    value={module.start_month}
-                                    onChange={(e) => onChange(index, 'start_month', parseInt(e.target.value))}
-                                    style={styles.select}
-                                    required
-                                >
-                                    {MOIS.map(m => (
-                                        <option key={m.value} value={m.value}>
-                                            {m.label}
-                                        </option>
-                                    ))}
-                                </select>
-                            </label>
+                            </div>
                         </div>
 
-                        <div style={styles.field}>
-                            <label style={styles.label}>
-                                Mois de fin *
-                                <select
-                                    value={module.end_month}
-                                    onChange={(e) => onChange(index, 'end_month', parseInt(e.target.value))}
-                                    style={styles.select}
-                                    required
-                                >
-                                    {MOIS.map(m => (
-                                        <option key={m.value} value={m.value}>
-                                            {m.label}
-                                        </option>
-                                    ))}
-                                </select>
-                            </label>
+                        {/* Ligne 2 : Dates */}
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">
+                                    Début
+                                </label>
+                                <div className="relative">
+                                    <select
+                                        value={module.start_month}
+                                        onChange={(e) => onChange(index, 'start_month', parseInt(e.target.value))}
+                                        className="w-full appearance-none px-3 py-2 rounded-lg border border-slate-200 text-sm bg-white focus:border-nws-purple focus:ring-4 focus:ring-nws-purple/10 outline-none transition-all cursor-pointer"
+                                    >
+                                        {MOIS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+                                    </select>
+                                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
+                                </div>
+                            </div>
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">
+                                    Fin
+                                </label>
+                                <div className="relative">
+                                    <select
+                                        value={module.end_month}
+                                        onChange={(e) => onChange(index, 'end_month', parseInt(e.target.value))}
+                                        className="w-full appearance-none px-3 py-2 rounded-lg border border-slate-200 text-sm bg-white focus:border-nws-purple focus:ring-4 focus:ring-nws-purple/10 outline-none transition-all cursor-pointer"
+                                    >
+                                        {MOIS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+                                    </select>
+                                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
+                                </div>
+                            </div>
                         </div>
-                    </div>
 
-                    <div style={styles.field}>
-                        <label style={styles.label}>
-                            Contenu du module (un élément par ligne)
+                        {/* Ligne 3 : Contenu */}
+                        <div className="space-y-1.5">
+                            <label className="text-xs font-medium text-slate-500 uppercase tracking-wide flex justify-between">
+                                <span>Contenu</span>
+                            </label>
                             <textarea
                                 value={module.content?.join('\n') || ''}
-                                onChange={(e) => onChange(
-                                    index,
-                                    'content',
-                                    e.target.value.split('\n')
-                                )}
-                                style={styles.textarea}
+                                onChange={(e) => onChange(index, 'content', e.target.value.split('\n'))}
                                 rows={4}
-                                placeholder="Installation, configuration et déploiement&#10;Gestion des plugins&#10;Thèmes personnalisés"
+                                className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:border-nws-purple focus:ring-4 focus:ring-nws-purple/10 outline-none transition-all resize-y min-h-[100px]"
+                                placeholder={"Introduction au sujet\nInstallation des outils\nPremier projet"}
                             />
-                        </label>
-                        <p style={styles.hint}>
-                            💡 Un élément par ligne. Ces contenus décrivent ce qui sera enseigné dans le module.
-                        </p>
-                    </div>
-
-                    {/* Livrables */}
-                    <div style={styles.deliverablesSection}>
-                        <div style={styles.deliverableHeader}>
-                            <label style={styles.label}>📦 Livrables</label>
-                            <button
-                                type="button"
-                                onClick={addDeliverable}
-                                style={styles.addDeliverableButton}
-                            >
-                                + Ajouter un livrable
-                            </button>
                         </div>
 
-                        {(!module.deliverables || module.deliverables.length === 0) ? (
-                            <p style={styles.emptyDeliverables}>
-                                Aucun livrable pour ce module.
-                            </p>
-                        ) : (
-                            <div style={styles.deliverablesList}>
-                                {module.deliverables.map((deliverable, delivIndex) => (
-                                    <div key={delivIndex} style={styles.deliverableItem}>
-                                        <div style={styles.deliverableFields}>
+                        {/* Zone Livrables */}
+                        <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
+                            <div className="flex items-center justify-between mb-3">
+                                <label className="flex items-center gap-2 text-xs font-bold text-slate-700 uppercase tracking-wide">
+                                    <Package size={14} className="text-nws-purple" />
+                                    Livrables attendus
+                                </label>
+                                <button
+                                    type="button"
+                                    onClick={addDeliverable}
+                                    className="text-xs font-medium text-nws-purple hover:text-purple-700 flex items-center gap-1 px-2 py-1 rounded hover:bg-purple-100 transition-colors"
+                                >
+                                    <Plus size={14} />
+                                    Ajouter
+                                </button>
+                            </div>
+
+                            {(!module.deliverables || module.deliverables.length === 0) ? (
+                                <div className="text-center py-4 text-slate-400 text-sm italic border border-dashed border-slate-200 rounded-lg">
+                                    Aucun livrable défini pour ce module
+                                </div>
+                            ) : (
+                                <div className="space-y-2">
+                                    {module.deliverables.map((deliverable, delivIndex) => (
+                                        <div key={delivIndex} className="flex flex-col sm:flex-row gap-2 items-start sm:items-center bg-white p-2 rounded-lg border border-slate-200 shadow-sm">
                                             <input
                                                 type="text"
                                                 value={deliverable.descriptif}
                                                 onChange={(e) => updateDeliverable(delivIndex, 'descriptif', e.target.value)}
-                                                style={{ ...styles.input, flex: 2 }}
-                                                placeholder="Descriptif du livrable"
+                                                className="flex-[2] w-full text-sm px-2 py-1.5 rounded border border-transparent hover:border-slate-200 focus:border-nws-purple focus:outline-none transition-colors"
+                                                placeholder="Titre du rendu (ex: Dépôt GitHub)"
                                             />
+                                            <div className="w-px h-4 bg-slate-200 hidden sm:block"></div>
                                             <input
                                                 type="datetime-local"
                                                 value={deliverable.date}
                                                 onChange={(e) => updateDeliverable(delivIndex, 'date', e.target.value)}
-                                                style={{ ...styles.input, flex: 1 }}
+                                                className="flex-1 w-full text-xs text-slate-600 px-2 py-1.5 rounded border border-transparent hover:border-slate-200 focus:border-nws-purple focus:outline-none transition-colors"
                                             />
+                                            <button
+                                                type="button"
+                                                onClick={() => removeDeliverable(delivIndex)}
+                                                className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors self-end sm:self-center"
+                                                title="Supprimer ce livrable"
+                                            >
+                                                <X size={14} />
+                                            </button>
                                         </div>
-                                        <button
-                                            type="button"
-                                            onClick={() => removeDeliverable(delivIndex)}
-                                            style={styles.removeDeliverableButton}
-                                            title="Supprimer ce livrable"
-                                        >
-                                            ✕
-                                        </button>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
+                                    ))}
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
             )}
         </div>
     );
 }
-
-const styles = {
-    card: {
-        background: 'white',
-        border: '1px solid #e5e7eb',
-        borderRadius: '0.6rem',
-        overflow: 'hidden',
-        transition: 'all 0.2s',
-    },
-    cardDragging: {
-        opacity: 0.5,
-        border: '2px dashed #3b82f6',
-    },
-    header: {
-        display: 'flex',
-        alignItems: 'center',
-        gap: '0.8rem',
-        padding: '0.8rem 1rem',
-        background: '#f9fafb',
-        borderBottom: '1px solid #e5e7eb',
-    },
-    dragHandle: {
-        cursor: 'grab',
-        fontSize: '1rem',
-        color: '#9ca3af',
-        userSelect: 'none',
-        padding: '0.2rem',
-    },
-    expandButton: {
-        background: 'none',
-        border: 'none',
-        cursor: 'pointer',
-        fontSize: '0.9rem',
-        padding: '0.2rem',
-        color: '#6b7280',
-    },
-    headerInfo: {
-        flex: 1,
-        display: 'flex',
-        alignItems: 'center',
-        gap: '1rem',
-    },
-    title: {
-        margin: 0,
-        fontSize: '0.9rem',
-        fontWeight: 600,
-        color: '#1e293b',
-    },
-    period: {
-        fontSize: '0.75rem',
-        color: '#6b7280',
-        padding: '0.2rem 0.6rem',
-        background: '#f3f4f6',
-        borderRadius: '0.3rem',
-        fontWeight: 500,
-    },
-    actions: {
-        display: 'flex',
-        gap: '0.4rem',
-    },
-    iconButton: {
-        width: '2rem',
-        height: '2rem',
-        background: '#f3f4f6',
-        border: '1px solid #d1d5db',
-        borderRadius: '0.4rem',
-        cursor: 'pointer',
-        fontSize: '0.9rem',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        transition: 'all 0.2s',
-    },
-    removeButton: {
-        width: '2rem',
-        height: '2rem',
-        background: '#fee2e2',
-        border: '1px solid #fecaca',
-        borderRadius: '0.4rem',
-        cursor: 'pointer',
-        fontSize: '0.9rem',
-        color: '#dc2626',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        transition: 'all 0.2s',
-    },
-    content: {
-        padding: '1rem',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '0.8rem',
-    },
-    row: {
-        display: 'flex',
-        gap: '1rem',
-    },
-    field: {
-        flex: 1,
-    },
-    label: {
-        display: 'block',
-        fontSize: '0.85rem',
-        fontWeight: 500,
-        color: '#374151',
-        marginBottom: '0.4rem',
-    },
-    input: {
-        width: '100%',
-        padding: '0.6rem',
-        marginTop: '0.3rem',
-        borderRadius: '0.5rem',
-        border: '1px solid #d1d5db',
-        fontSize: '0.9rem',
-        transition: 'border-color 0.2s',
-    },
-    select: {
-        width: '100%',
-        padding: '0.6rem',
-        marginTop: '0.3rem',
-        borderRadius: '0.5rem',
-        border: '1px solid #d1d5db',
-        fontSize: '0.9rem',
-        background: 'white',
-        cursor: 'pointer',
-        transition: 'border-color 0.2s',
-    },
-    textarea: {
-        width: '100%',
-        padding: '0.5rem',
-        marginTop: '0.3rem',
-        borderRadius: '0.5rem',
-        border: '1px solid #d1d5db',
-        fontSize: '0.85rem',
-        fontFamily: 'inherit',
-        resize: 'vertical',
-    },
-    hint: {
-        margin: '0.3rem 0 0 0',
-        fontSize: '0.75rem',
-        color: '#6b7280',
-        fontStyle: 'italic',
-    },
-    deliverablesSection: {
-        marginTop: '1rem',
-        padding: '1rem',
-        background: '#f9fafb',
-        borderRadius: '0.5rem',
-        border: '1px solid #e5e7eb',
-    },
-    deliverableHeader: {
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: '0.8rem',
-    },
-    addDeliverableButton: {
-        padding: '0.4rem 0.8rem',
-        background: '#3b82f6',
-        color: 'white',
-        border: 'none',
-        borderRadius: '0.4rem',
-        cursor: 'pointer',
-        fontSize: '0.8rem',
-        fontWeight: 500,
-        transition: 'background-color 0.2s',
-    },
-    deliverablesList: {
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '0.6rem',
-    },
-    deliverableItem: {
-        display: 'flex',
-        gap: '0.6rem',
-        alignItems: 'center',
-    },
-    deliverableFields: {
-        flex: 1,
-        display: 'flex',
-        gap: '0.6rem',
-    },
-    removeDeliverableButton: {
-        width: '2rem',
-        height: '2rem',
-        background: '#fee2e2',
-        border: '1px solid #fecaca',
-        borderRadius: '0.4rem',
-        cursor: 'pointer',
-        fontSize: '0.9rem',
-        color: '#dc2626',
-        flexShrink: 0,
-    },
-    emptyDeliverables: {
-        textAlign: 'center',
-        color: '#9ca3af',
-        fontSize: '0.85rem',
-        padding: '1rem',
-        fontStyle: 'italic',
-    },
-};
 
 export default ModuleCard;
