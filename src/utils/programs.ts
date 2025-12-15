@@ -14,15 +14,20 @@ export type ProgramModule = {
   deliverables?: Deliverable[];
 };
 
-export type Program = {
+
+export interface Program {
   key: string;
   label: string;
   description?: string;
   modules: ProgramModule[];
   objectives?: string;
-  level?: string;
   resources?: string[];
-};
+  published?: boolean;
+  publishToken?: string | null;
+  publishedAt?: Date | null;
+  updatedAt: Date;
+  createdAt: Date;
+}
 
 export type Programs = Record<string, Program>;
 
