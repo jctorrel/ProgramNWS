@@ -1,5 +1,6 @@
 // src/components/public/Syllabus.jsx
-import { useState } from 'react';
+import { createPortal } from 'react-dom';
+import { useState, useRef } from 'react';
 import {
     Code2,
     Database,
@@ -160,7 +161,7 @@ const ModuleProgressBars = ({ modules, hoveredModule, setHoveredModule }) => {
                     <div
                         key={module.id || index}
                         className={`absolute rounded-lg transition-all duration-300 cursor-pointer shadow-sm
-                            ${isHovered ? 'h-2.5 shadow-lg z-20' : 'h-1.5 z-10 hover:opacity-90'}
+                            ${isHovered ? 'h-2 shadow-lg z-20' : 'h-1.5 z-10 hover:opacity-90'}
                         `}
                         style={{
                             top: `${index * 10}px`,
@@ -187,61 +188,95 @@ const ModuleProgressBars = ({ modules, hoveredModule, setHoveredModule }) => {
 };
 
 const DeliverableMarker = ({ deliv, isHovered, onHover, onLeave }) => {
-    // Logique pour éviter que l'infobulle ne sorte de l'écran (Scrollbar horizontale)
-    let tooltipPositionClass = "-translate-x-1/2 left-1/2"; // Défaut : centré
-    let tooltipArrowClass = "left-1/2 -translate-x-1/2";
+    const markerRef = useRef(null);
+    const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
 
-    if (deliv.position < 10) {
-        tooltipPositionClass = "left-0 translate-x-0"; // Aligné gauche
-        tooltipArrowClass = "left-4";
-    } else if (deliv.position > 90) {
-        tooltipPositionClass = "right-0 translate-x-0 left-auto"; // Aligné droite
-        tooltipArrowClass = "right-4 left-auto";
-    }
+    const handleMouseEnter = () => {
+        if (markerRef.current) {
+            // On récupère la position exacte du point sur l'ÉCRAN
+            const rect = markerRef.current.getBoundingClientRect();
+            
+            setTooltipPos({
+                // On centre horizontalement par rapport au point
+                x: rect.left + rect.width / 2,
+                // On se place au-dessus du point (avec une petite marge de 15px)
+                y: rect.top - 15 
+            });
+        }
+        onHover();
+    };
 
     return (
-        <div
-            className="absolute top-0 group z-30" // Retrait du top-1/2 pour un contrôle précis
-            style={{ left: `${deliv.position}%` }}
-            onMouseEnter={onHover}
-            onMouseLeave={onLeave}
-        >
-            {/* Ligne de connexion (Ajustée pour remonter vers la barre) */}
+        <>
             <div
-                className={`absolute bottom-full left-1/2 -translate-x-1/2 w-0.5 bg-current transition-all duration-300 origin-bottom
-                    ${isHovered ? 'h-8 opacity-100' : 'h-4 opacity-40 group-hover:h-6'}
-                `}
-                style={{ color: deliv.color, marginBottom: '2px' }}
-            />
-
-            {/* Point (Dot) */}
-            <div
-                className={`relative w-3.5 h-3.5 -mt-2 rounded-full border-[3px] border-white shadow-md transition-all duration-300 cursor-pointer
-                    ${isHovered ? 'scale-150 ring-2 ring-offset-2 ring-indigo-100' : 'scale-100 group-hover:scale-110'}
-                `}
-                style={{ backgroundColor: deliv.color }}
+                ref={markerRef}
+                className="absolute top-1/2 z-20 group"
+                style={{ left: `${deliv.position}%` }}
+                onMouseEnter={handleMouseEnter} // On utilise notre handler modifié
+                onMouseLeave={onLeave}
             >
-                {/* Tooltip Livrable */}
-                {isHovered && (
+                {/* --- LE VISUEL DU MARQUEUR (Ligne + Point) --- */}
+                
+                {/* Connecteur fin */}
+                <div 
+                    className={`absolute bottom-2 right-2.4 -translate-x-px w-[2px] bg-current transition-all duration-300 pointer-events-none
+                        ${isHovered ? 'h-8 opacity-100' : 'h-5 opacity-40 group-hover:h-6'}
+                    `}
+                    style={{ color: deliv.color, marginBottom: '4px' }}
+                />
+                
+                {/* Point (Target style) */}
+                <div className="relative -translate-x-1/2 -translate-y-[6px]">
+                    <div 
+                        className={`absolute inset-0 rounded-full transition-all duration-300 pointer-events-none ${isHovered ? 'opacity-30 scale-150' : 'opacity-0 scale-100'}`}
+                        style={{ backgroundColor: deliv.color }}
+                    />
                     <div
-                        className={`absolute bottom-[200%] ${tooltipPositionClass} w-64 p-4 bg-white rounded-xl shadow-[0_10px_40px_-10px_rgba(0,0,0,0.2)] border border-slate-100 z-[100] animate-in slide-in-from-bottom-2 duration-200`}
-                    >
-                        <div className="text-[10px] font-bold uppercase tracking-wider mb-1" style={{ color: deliv.color }}>
-                            {deliv.moduleLabel}
-                        </div>
-                        <div className="text-sm font-bold text-slate-800 leading-tight mb-1">
-                            {deliv.descriptif}
-                        </div>
-                        <div className="text-xs text-slate-500 font-medium bg-slate-50 inline-block px-2 py-0.5 rounded mt-1">
-                            {formatDate(deliv.date)}
-                        </div>
-
-                        {/* Flèche du tooltip */}
-                        <div className={`absolute -bottom-1.5 w-3 h-3 bg-white border-b border-r border-slate-100 transform rotate-45 ${tooltipArrowClass}`} />
-                    </div>
-                )}
+                        className={`relative w-3 h-3 rounded-full bg-white border-[3px] transition-all duration-300 cursor-pointer z-10
+                            ${isHovered ? 'scale-110 ring-2' : 'group-hover:scale-110'}
+                        `}
+                        style={{ 
+                            borderColor: deliv.color,
+                            boxShadow: isHovered ? `0 2px 8px ${deliv.color}40` : 'none'
+                        }}
+                    />
+                </div>
             </div>
-        </div>
+
+            {/* --- LE PORTAL (L'infobulle téléportée) --- */}
+            {isHovered && createPortal(
+                <div 
+                    className="fixed z-[9999] pointer-events-none" // FIXED + Z-INDEX MAX
+                    style={{ 
+                        left: tooltipPos.x, 
+                        top: tooltipPos.y,
+                        transform: 'translate(-50%, -100%)' 
+                    }}
+                >
+                    {/* Contenu de l'infobulle */}
+                    <div className="mb-2 w-64 bg-white rounded-xl shadow-2xl shadow-slate-900/20 border border-slate-100 p-4 animate-in fade-in zoom-in-95 duration-200">
+                        <div className="relative z-10">
+                            <div className="flex items-center gap-2 mb-2 pb-2 border-b border-slate-50">
+                                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: deliv.color }} />
+                                <span className="text-xs font-bold uppercase tracking-wider text-slate-500 truncate">
+                                    {deliv.moduleLabel}
+                                </span>
+                            </div>
+                            
+                            <div className="text-sm font-bold text-slate-800 leading-tight mb-2">
+                                {deliv.descriptif}
+                            </div>
+                            
+                            <div className="flex items-center gap-2 text-xs text-slate-500 font-medium bg-slate-50 px-2 py-1 rounded-md w-fit">
+                                <span className="w-3 h-3 flex items-center justify-center">📅</span>
+                                {formatDate(deliv.date)}
+                            </div>
+                        </div>
+                    </div>
+                </div>,
+                document.body // On injecte directement dans le <body>
+            )}
+        </>
     );
 };
 
