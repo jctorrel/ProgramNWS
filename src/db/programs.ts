@@ -56,7 +56,7 @@ export async function upsertProgram(key: string, data: Partial<Program>): Promis
   const db = getDb();
   const now = new Date();
 
-  const { label, description, objectives, level, resources, modules } = data;
+  const { label, description, objectives, resources, modules } = data;
 
   // Validation basique
   if (!label) {
@@ -75,7 +75,6 @@ export async function upsertProgram(key: string, data: Partial<Program>): Promis
       updatedAt: now,
       // Champs optionnels (pour rétrocompatibilité)
       ...(objectives !== undefined && { objectives }),
-      ...(level !== undefined && { level }),
       ...(resources !== undefined && { resources }),
     },
     $setOnInsert: {
