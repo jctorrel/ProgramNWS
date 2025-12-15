@@ -35,7 +35,7 @@ function Login() {
             google.accounts.id.renderButton(
                 document.getElementById("googleSignInDiv"),
                 {
-                    theme: "filled_blue", // Ou 'outline' selon préférence, 'filled_blue' attire plus l'œil
+                    theme: "filled_blue",
                     size: "large",
                     shape: "pill",
                     width: 280,
