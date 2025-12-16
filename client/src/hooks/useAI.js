@@ -26,8 +26,6 @@ export function useAI() {
                 const errorData = await response.json();
                 throw new Error(errorData.error || 'Erreur lors de la modification');
             }
-            
-            console.log(response.program);
 
             // Parser le JSON retourné par l'IA
             let modifiedProgram;

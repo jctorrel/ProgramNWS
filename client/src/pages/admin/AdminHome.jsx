@@ -19,6 +19,9 @@ function AdminHome() {
         createProgram,
         deleteProgram: deleteProgramFromList,
         refreshPrograms,
+        publishProgram,
+        unpublishProgram,
+        regeneratePublishToken
     } = usePrograms();
 
     const {
@@ -95,7 +98,7 @@ function AdminHome() {
     return (
         <section className="min-h-screen bg-slate-50/50 p-6 md:p-8">
             <div className="max-w-[1600px] mx-auto">
-                
+
                 {/* En-tête de la page */}
                 <header className="mb-8 flex items-center gap-3">
                     <div className="p-2 bg-white rounded-lg border border-slate-200 shadow-sm text-nws-purple">
@@ -123,7 +126,7 @@ function AdminHome() {
 
                 {/* Layout Principal : Grille 2 colonnes (Sidebar / Main) */}
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-                    
+
                     {/* Colonne Gauche : Liste des Programmes */}
                     <div className="lg:col-span-4 xl:col-span-3">
                         <ProgramsList
@@ -143,6 +146,9 @@ function AdminHome() {
                             saving={saving}
                             saveMessage={saveMessage}
                             error={saveError}
+                            publishProgram={publishProgram}
+                            unpublishProgram={unpublishProgram}
+                            regeneratePublishToken={regeneratePublishToken}
                         />
                     </div>
                 </div>
