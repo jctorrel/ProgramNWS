@@ -68,7 +68,7 @@ const getTimelineMonths = () => {
 };
 
 const getLastActiveMonth = (modules) => {
-    if (!modules || modules.length === 0) return 7;
+    if (!modules || modules.length === 0) return 12;
     let maxPosition = 0;
     modules.forEach(module => {
         const endMonth = module.end_month;
@@ -144,9 +144,6 @@ const ModuleProgressBars = ({ modules, hoveredModule, setHoveredModule }) => {
 
     return (
         <div className="relative h-24 mb-8 select-none">
-            {/* Background Track */}
-
-
             {modules.map((module, index) => {
                 const color = COLORS[index % COLORS.length];
                 const isHovered = hoveredModule === module.id;
@@ -155,7 +152,7 @@ const ModuleProgressBars = ({ modules, hoveredModule, setHoveredModule }) => {
                 const endPos = module.end_month >= 9 ? module.end_month - 8 : module.end_month + 4;
 
                 const left = ((startPos - 1) / 10) * 100;
-                const width = ((endPos - startPos + 1) / 10) * 100;
+                const width = ((endPos - startPos + 1) * 100) / 12;
 
                 return (
                     <div
