@@ -18,11 +18,33 @@ import {
     Layers
 } from 'lucide-react';
 
+import TimelineMonths from './TimelineMonths.jsx';
+import DeliverableMarker from './DeliverableMarker.jsx';
+
 // ============================================
 // CONFIGURATION & CONSTANTES
 // ============================================
 
-const COLORS = ['#ffc72c', '#00c7b1', '#ff4b4b', '#6c3df4'];
+const COLORS = [
+    '#ff4b4b', // Rouge vif
+    '#ff9f43', // Orange
+    '#ffc72c', // Jaune Moutarde
+    '#28c76f', // Vert Émeraude
+    '#0abde3', // Cyan
+    '#3e82f7', // Bleu Royal
+    '#5352ed', // Indigo
+    '#a55eea', // Violet clair
+    '#f368e0', // Rose Bonbon
+    '#ff6b6b', // Saumon
+    '#5f27cd', // Violet Profond
+    '#10ac84', // Vert Sapin
+    '#00d2d3', // Bleu Lagon
+    '#54a0ff', // Bleu Ciel
+    '#e1b12c', // Doré
+    '#b33771', // Magenta foncé
+    '#eb3b5a', // Rouge Rubis
+    '#8854d0'  // Pourpre
+];
 const MONTH_NAMES = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc'];
 
 // Mapping des icônes selon le titre du module
@@ -53,11 +75,37 @@ const formatPeriod = (startMonth, endMonth) => {
     return `${MONTH_NAMES[startMonth - 1]} - ${MONTH_NAMES[endMonth - 1]}`;
 };
 
-const getDeliverablePosition = (date) => {
-    const delivDate = new Date(date);
-    const month = delivDate.getMonth() + 1;
-    // Année scolaire : Sept(9) -> Juin(6)
-    return month >= 9 ? ((month - 9) / 10) * 100 : ((month + 3) / 10) * 100;
+export const getDaysFromSept1 = (dateInput) => {
+    // 1. On sécurise l'objet Date
+    const targetDate = new Date(dateInput);
+
+    // 2. On reset les heures à minuit pour éviter les bugs de fuseau horaire/heures d'été
+    // Cela permet de compter des jours "calendaires" pleins
+    targetDate.setHours(12, 0, 0, 0); // On se met à midi pour éviter les décalages DST
+
+    // 3. Déterminer l'année du "1er Septembre" de référence
+    let startYear = targetDate.getFullYear();
+
+    // Si on est entre Janvier (0) et Août (7), la rentrée était l'année d'avant
+    if (targetDate.getMonth() < 8) { // 8 = Septembre
+        startYear -= 1;
+    }
+
+    const startDate = new Date(startYear, 8, 1); // 1er Septembre (Mois 8)
+    startDate.setHours(12, 0, 0, 0);
+
+    // 4. Calcul de la différence
+    const diffTime = targetDate - startDate;
+
+    // 5. Conversion millisecondes -> jours
+    // Math.round est important pour gérer les micro-décalages
+    const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+
+    return diffDays;
+};
+
+const getPosition = (date) => {
+    return (getDaysFromSept1(date) / 366) * 100;
 };
 
 const getTimelineMonths = () => {
@@ -65,17 +113,6 @@ const getTimelineMonths = () => {
     for (let i = 9; i <= 12; i++) months.push({ num: i, name: MONTH_NAMES[i - 1] });
     for (let i = 1; i <= 8; i++) months.push({ num: i, name: MONTH_NAMES[i - 1] });
     return months;
-};
-
-const getLastActiveMonth = (modules) => {
-    if (!modules || modules.length === 0) return 12;
-    let maxPosition = 0;
-    modules.forEach(module => {
-        const endMonth = module.end_month;
-        const position = endMonth >= 9 ? endMonth - 8 : endMonth + 4;
-        maxPosition = Math.max(maxPosition, position);
-    });
-    return maxPosition;
 };
 
 // ============================================
@@ -121,29 +158,11 @@ const Stats = ({ totalModules, totalDeliverables }) => (
     </div>
 );
 
-const TimelineMonths = ({ months, lastActiveMonth }) => (
-    <div className="flex justify-between mb-4 px-2">
-        <div className="absolute top-5 left-0 w-full h-2 bg-slate-100 rounded-full" />
-        {months.map((month, idx) => {
-            const isActive = idx < lastActiveMonth;
-            return (
-                <div key={idx} className="flex flex-col items-center flex-1 relative group">
-                    <span className={`text-sm font-bold mb-3 transition-colors duration-300 ${isActive ? 'text-nws-purple' : 'text-slate-300'}`}>
-                        {month.name}
-                    </span>
-                    {/* Tick mark */}
-                    <div className={`w-0.5 h-2 rounded-full transition-colors duration-300 ${isActive ? 'bg-nws-purple' : 'bg-slate-200'}`} />
-                </div>
-            );
-        })}
-    </div>
-);
-
 const ModuleProgressBars = ({ modules, hoveredModule, setHoveredModule }) => {
     if (!modules?.length) return null;
 
     return (
-        <div className="relative h-24 mb-8 select-none">
+        <div className="relative h-24 mb-14 mt-4 select-none">
             {modules.map((module, index) => {
                 const color = COLORS[index % COLORS.length];
                 const isHovered = hoveredModule === module.id;
@@ -151,8 +170,8 @@ const ModuleProgressBars = ({ modules, hoveredModule, setHoveredModule }) => {
                 const startPos = module.start_month >= 9 ? module.start_month - 8 : module.start_month + 4;
                 const endPos = module.end_month >= 9 ? module.end_month - 8 : module.end_month + 4;
 
-                const left = ((startPos - 1) / 10) * 100;
-                const width = ((endPos - startPos + 1) * 100) / 12;
+                const left = (startPos - 1) * 100 / 12;
+                const width = (endPos) * 100 / 12 - left;
 
                 return (
                     <div
@@ -170,13 +189,14 @@ const ModuleProgressBars = ({ modules, hoveredModule, setHoveredModule }) => {
                         onMouseEnter={() => setHoveredModule(module.id)}
                         onMouseLeave={() => setHoveredModule(null)}
                     >
-                        {/* Tooltip on Hover */}
-                        {isHovered && (
-                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-slate-800 text-white text-xs font-semibold rounded shadow-xl whitespace-nowrap animate-in fade-in zoom-in-95 duration-200 z-50">
-                                {module.label}
-                                <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-800" />
-                            </div>
-                        )}
+                        
+                    {/* Tooltip on Hover */}
+                    {isHovered && (
+                        <div className="absolute top-3 left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-slate-800 text-white text-xs font-semibold rounded shadow-xl whitespace-nowrap animate-in fade-in zoom-in-95 duration-200 z-50">
+                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-800 rotate-180" />
+                            {module.label}
+                        </div>
+                    )}
                     </div>
                 );
             })}
@@ -184,116 +204,22 @@ const ModuleProgressBars = ({ modules, hoveredModule, setHoveredModule }) => {
     );
 };
 
-const DeliverableMarker = ({ deliv, isHovered, onHover, onLeave }) => {
-    const markerRef = useRef(null);
-    const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
-
-    const handleMouseEnter = () => {
-        if (markerRef.current) {
-            // On récupère la position exacte du point sur l'ÉCRAN
-            const rect = markerRef.current.getBoundingClientRect();
-            
-            setTooltipPos({
-                // On centre horizontalement par rapport au point
-                x: rect.left + rect.width / 2,
-                // On se place au-dessus du point (avec une petite marge de 15px)
-                y: rect.top - 15 
-            });
-        }
-        onHover();
-    };
-
-    return (
-        <>
-            <div
-                ref={markerRef}
-                className="absolute top-1/2 z-20 group"
-                style={{ left: `${deliv.position}%` }}
-                onMouseEnter={handleMouseEnter} // On utilise notre handler modifié
-                onMouseLeave={onLeave}
-            >
-                {/* --- LE VISUEL DU MARQUEUR (Ligne + Point) --- */}
-                
-                {/* Connecteur fin */}
-                <div 
-                    className={`absolute bottom-2 right-2.4 -translate-x-px w-[2px] bg-current transition-all duration-300 pointer-events-none
-                        ${isHovered ? 'h-8 opacity-100' : 'h-5 opacity-40 group-hover:h-6'}
-                    `}
-                    style={{ color: deliv.color, marginBottom: '4px' }}
-                />
-                
-                {/* Point (Target style) */}
-                <div className="relative -translate-x-1/2 -translate-y-[6px]">
-                    <div 
-                        className={`absolute inset-0 rounded-full transition-all duration-300 pointer-events-none ${isHovered ? 'opacity-30 scale-150' : 'opacity-0 scale-100'}`}
-                        style={{ backgroundColor: deliv.color }}
-                    />
-                    <div
-                        className={`relative w-3 h-3 rounded-full bg-white border-[3px] transition-all duration-300 cursor-pointer z-10
-                            ${isHovered ? 'scale-110 ring-2' : 'group-hover:scale-110'}
-                        `}
-                        style={{ 
-                            borderColor: deliv.color,
-                            boxShadow: isHovered ? `0 2px 8px ${deliv.color}40` : 'none'
-                        }}
-                    />
-                </div>
-            </div>
-
-            {/* --- LE PORTAL (L'infobulle téléportée) --- */}
-            {isHovered && createPortal(
-                <div 
-                    className="fixed z-[9999] pointer-events-none" // FIXED + Z-INDEX MAX
-                    style={{ 
-                        left: tooltipPos.x, 
-                        top: tooltipPos.y,
-                        transform: 'translate(-50%, -100%)' 
-                    }}
-                >
-                    {/* Contenu de l'infobulle */}
-                    <div className="mb-2 w-64 bg-white rounded-xl shadow-2xl shadow-slate-900/20 border border-slate-100 p-4 animate-in fade-in zoom-in-95 duration-200">
-                        <div className="relative z-10">
-                            <div className="flex items-center gap-2 mb-2 pb-2 border-b border-slate-50">
-                                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: deliv.color }} />
-                                <span className="text-xs font-bold uppercase tracking-wider text-slate-500 truncate">
-                                    {deliv.moduleLabel}
-                                </span>
-                            </div>
-                            
-                            <div className="text-sm font-bold text-slate-800 leading-tight mb-2">
-                                {deliv.descriptif}
-                            </div>
-                            
-                            <div className="flex items-center gap-2 text-xs text-slate-500 font-medium bg-slate-50 px-2 py-1 rounded-md w-fit">
-                                <span className="w-3 h-3 flex items-center justify-center">📅</span>
-                                {formatDate(deliv.date)}
-                            </div>
-                        </div>
-                    </div>
-                </div>,
-                document.body // On injecte directement dans le <body>
-            )}
-        </>
-    );
-};
-
 const Timeline = ({ deliverables, modules, hoveredDeliverable, hoveredModule, setHoveredDeliverable, setHoveredModule }) => {
     const months = getTimelineMonths();
-    const lastActiveMonth = getLastActiveMonth(modules);
 
     return (
-        <div className="bg-white rounded-[2.5rem] border border-slate-200 p-8 shadow-xl shadow-slate-200/50 mb-16 overflow-hidden">
+        <div className="bg-white rounded-[2.5rem] border border-slate-200 px-8 py-2 shadow-xl shadow-slate-200/50 mb-6 overflow-hidden">
             {/* Titre décoratif */}
-            <div className="text-center mb-8">
+            <div className="text-center mb-6">
                 <h3 className="text-sm font-bold text-slate-400 uppercase tracking-widest">Chronologie du programme</h3>
             </div>
 
             <div className="overflow-x-auto overflow-y-hidden pb-2 px-2">
                 <div className="min-w-[800px] relative">
-                    <TimelineMonths months={months} lastActiveMonth={lastActiveMonth} />
+                    <TimelineMonths months={months} />
 
                     {/* Zone des marqueurs */}
-                    <div className="relative h-2">
+                    <div className="relative h-5">
                         {deliverables.map((deliv, idx) => (
                             <DeliverableMarker
                                 key={idx}
@@ -423,7 +349,7 @@ function Syllabus({ program }) {
                     color,
                     moduleId: module.id,
                     moduleLabel: module.label,
-                    position: getDeliverablePosition(deliv.date)
+                    position: getPosition(deliv.date)
                 });
             }
         });
