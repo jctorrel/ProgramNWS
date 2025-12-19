@@ -1,16 +1,14 @@
-name: Deploy Programs to VPS
+name: Deploy to VPS
 
 on:
   push:
-    branches: [ main ]
-
-concurrency:
-  group: deploy-programs
-  cancel-in-progress: true
+    branches:
+      - main
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -18,22 +16,13 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
-          cache: "npm"
+          node-version: '20'
 
-      # CI sanity check (root)
-      - name: Install server deps (CI check)
-        run: npm ci
+      - name: Install deps (CI check)
+        run: npm install
 
-      - name: Build server (CI check)
-        run: npm run build:server
-
-      # CI sanity check (client)
-      - name: Install client deps (CI check)
-        run: npm --prefix client ci
-
-      - name: Build client (CI check)
-        run: npm --prefix client run build
+      - name: Build (CI check)
+        run: npm run build
 
       - name: Deploy to VPS via SSH
         uses: appleboy/ssh-action@v1.0.0
@@ -43,26 +32,18 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
           port: ${{ secrets.SSH_PORT }}
           script: |
-            set -e
-
             cd /var/www/Programs
 
-            echo "👉 Update code"
-            git fetch origin main
+            echo "👉 Fetch latest main"
+            git fetch origin
             git reset --hard origin/main
 
-            echo "👉 Install server deps"
-            npm ci
+            echo "👉 Install dependencies"
+            npm install
 
-            echo "👉 Install client deps"
-            npm --prefix client ci
+            echo "👉 Build backend + frontend"
+            npm run build
 
-            echo "👉 Build server + client"
-            npm run build:server
-            npm --prefix client run build
-
-            echo "👉 Restart PM2"
-            pm2 startOrReload ecosystem.config.cjs --only programs --env production
+            echo "👉 Reload PM2"
+            pm2 reload ecosystem.config.cjs --name Programs --env production || pm2 start ecosystem.config.cjs --name Programs --env production
             pm2 save
-
-            echo "✅ Programs deployed"
