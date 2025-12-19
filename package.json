@@ -6,6 +6,7 @@
   "workspaces": [
     "client"
   ],
+  "homepage": "/Programs/",
   "scripts": {
     "dev": "tsx server.ts",
     "dev:client": "npm --workspace client run dev",

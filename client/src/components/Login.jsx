@@ -67,7 +67,7 @@ function Login() {
                     localStorage.setItem("user", JSON.stringify(data.user));
                 }
 
-                window.location.href = "/";
+                window.location.href = "/Programs/";
             } catch (e) {
                 console.error(e);
                 setError(e.message || "Une erreur est survenue lors de la connexion.");

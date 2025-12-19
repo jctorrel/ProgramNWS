@@ -8,7 +8,7 @@ import Home from "./pages/Home";
 
 function App() {
   return (
-    <BrowserRouter>
+    <BrowserRouter basename="/Programs">
       <Routes>
         <Route path="/login" element={<Login />} />
 
