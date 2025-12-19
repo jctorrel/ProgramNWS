@@ -28,7 +28,7 @@ function Login() {
             if (!window.google) return;
 
             google.accounts.id.initialize({
-                client_id: "615384218256-nq12r22v6dhc7t4g76o8r15if1vs85tm.apps.googleusercontent.com",
+                client_id: "710051575210-v97n9m4jmro2mb7f6l2nn00pl4jovq8j.apps.googleusercontent.com",
                 callback: handleCredentialResponse,
             });
 
