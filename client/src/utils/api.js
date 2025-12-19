@@ -1,7 +1,8 @@
+// client/src/utils/api.js
+const BASE = import.meta.env.BASE_URL;
+
 export async function apiFetch(url, options = {}) {
   const token = localStorage.getItem("access_token");
-
-  const BASE = import.meta.env.BASE_URL || "/";
 
   let finalUrl = url;
 

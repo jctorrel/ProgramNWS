@@ -38,7 +38,7 @@ export default async function buildApp(): Promise<express.Express> {
   app.use(express.static(staticDir));
 
   // Routes
-  app.use("/api", createApiRouter({
+  app.use("/Programs/api", createApiRouter({
     openai
   }));
 

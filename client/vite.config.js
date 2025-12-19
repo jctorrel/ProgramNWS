@@ -8,7 +8,7 @@ export default defineConfig({
     https: true,
     port: 5173,
     proxy: {
-      "/api": {
+      "/Programs/api": {
         target: "http://localhost:3002", // 👈 IMPORTANT : HTTP, pas HTTPS
         changeOrigin: true,
       },
