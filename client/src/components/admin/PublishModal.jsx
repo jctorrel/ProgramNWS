@@ -194,7 +194,7 @@ function PublishModal({ program, onClose, onPublish, onUnpublish, onRegenerateTo
     // Utilisation de window.location.origin pour s'adapter au localhost ou à la prod
     const domain = window.location.origin;
     const syllabusUrl = program.publishToken 
-        ? `${domain}/syllabus/${program.publishToken}`
+        ? `${domain}/Programs/syllabus/${program.publishToken}`
         : 'Lien indisponible';
 
     const handlePublish = async () => {

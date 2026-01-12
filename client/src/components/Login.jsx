@@ -47,27 +47,33 @@ function Login() {
         async function handleCredentialResponse(response) {
             setError("");
             setLoading(true);
+
             try {
                 const idToken = response.credential;
 
-                const res = await fetch("/api/auth/google", {
+                const API = `${import.meta.env.BASE_URL}api`;
+                const r = await fetch(`${API}/auth/google`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ idToken }),
                 });
 
-                const data = await res.json();
+                const raw = await r.text();
+                let data = null;
+                try {
+                    data = raw ? JSON.parse(raw) : null;
+                } catch {
+                    throw new Error(`Réponse non JSON (${r.status}): ${raw.slice(0, 120)}`);
+                }
 
-                if (!res.ok) {
-                    throw new Error(data.error || "Erreur d'authentification");
+                if (!r.ok) {
+                    throw new Error((data && data.error) || `Erreur d'auth (${r.status})`);
                 }
 
                 localStorage.setItem("access_token", data.token);
-                if (data.user) {
-                    localStorage.setItem("user", JSON.stringify(data.user));
-                }
+                if (data.user) localStorage.setItem("user", JSON.stringify(data.user));
 
-                window.location.href = "/Programs/";
+                window.location.href = import.meta.env.BASE_URL; // "/Programs/"
             } catch (e) {
                 console.error(e);
                 setError(e.message || "Une erreur est survenue lors de la connexion.");

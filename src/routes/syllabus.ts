@@ -24,7 +24,7 @@ export default function createSyllabusRouter(): express.Router {
         return res.status(404).json({ error: "not_found_or_not_published" });
       }
 
-      // Retourner le programme sans les infos sensibles
+      // Retourner le programme
       const publicProgram = {
         key: program.key,
         label: program.label,
@@ -33,7 +33,7 @@ export default function createSyllabusRouter(): express.Router {
         publishedAt: program.publishedAt
       };
 
-      res.json(publicProgram);
+      res.status(200).json(publicProgram);
     } catch (err) {
       logger.error("Erreur GET /api/syllabus/:token :", err);
       res.status(500).json({ error: "internal_error" });

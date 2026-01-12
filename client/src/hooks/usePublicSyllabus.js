@@ -1,5 +1,7 @@
 // src/hooks/usePublicSyllabus.js
+
 import { useEffect, useState } from "react";
+import { apiFetch } from "../utils/api";
 
 /**
  * Hook pour charger un syllabus publié via son token
@@ -52,10 +54,10 @@ export function usePublicSyllabus(token) {
     const loadSyllabus = async (token) => {
         try {            
             // Utiliser fetch direct (route publique, pas d'auth)
-            const response = await fetch(`/api/syllabus/${token}`);
+            const response = await apiFetch(`/api/syllabus/${token}`);
             
             // Gérer les différentes erreurs
-            if (!response.ok) {
+            if (!response.key) {
                 let errorCode = "server_error";
                 
                 if (response.status === 404) {
@@ -84,11 +86,8 @@ export function usePublicSyllabus(token) {
                 return;
             }
 
-            // Parse la réponse
-            const data = await response.json();
-
             setState({
-                program: data,
+                program: response,
                 loading: false,
                 error: null,
             });

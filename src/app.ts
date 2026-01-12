@@ -18,7 +18,7 @@ export const openai = new OpenAI({ apiKey: getEnv("OPENAI_API_KEY") });
 const FRONTEND_ORIGIN =
   process.env.NODE_ENV === "production"
     ? process.env.FRONTEND_ORIGIN
-    : "https://localhost:3000";
+    : "https://localhost:3002";
 
 export default async function buildApp(): Promise<express.Express> {
   const app = express();
@@ -38,7 +38,7 @@ export default async function buildApp(): Promise<express.Express> {
   app.use(express.static(staticDir));
 
   // Routes
-  app.use("/Programs/api", createApiRouter({
+  app.use("/api", createApiRouter({
     openai
   }));
 
@@ -47,5 +47,5 @@ export default async function buildApp(): Promise<express.Express> {
     res.sendFile(path.join(staticDir, "index.html"));
   });
 
-  return app;
+return app;
 }
