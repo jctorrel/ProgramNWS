@@ -51,7 +51,7 @@ function Login() {
             try {
                 const idToken = response.credential;
 
-                const r = await fetch(`Programs/api/auth/google`, {
+                const r = await fetch(`/Programs/api/auth/google`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ idToken }),
