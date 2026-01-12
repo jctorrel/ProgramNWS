@@ -51,8 +51,7 @@ function Login() {
             try {
                 const idToken = response.credential;
 
-                const API = `${import.meta.env.BASE_URL.replace(/\/$/, "")}/api`;
-                const r = await fetch(`${API}/auth/google`, {
+                const r = await fetch(`Programs/api/auth/google`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ idToken }),
